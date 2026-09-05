@@ -1,0 +1,6 @@
+{
+  "name": "创新大赛AI助手",
+  "description": "高校双创赛事智能体统一对话入口「AI 备赛教练」，支持政策咨询、BP深度诊断（调用4.2引擎）、模拟答辩（调用4.3引擎）、案例与竞品情报、校内智库对接及运营闭环。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
