@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   Repeat,
   LogOut,
-  Folder
+  Folder,
+  PanelLeft
 } from 'lucide-react';
 import { NotificationAlert, UserSession, ProjectItem } from '../types';
 import { TabType } from './Sidebar';
@@ -27,6 +28,8 @@ interface TopHeaderProps {
   alerts: NotificationAlert[];
   onSelectProjectFromAlert?: (projectId: string) => void;
   currentProject?: ProjectItem;
+  isSidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export default function TopHeader({
@@ -36,7 +39,9 @@ export default function TopHeader({
   onOpenRulesConfig,
   alerts,
   onSelectProjectFromAlert,
-  currentProject
+  currentProject,
+  isSidebarCollapsed = false,
+  onToggleSidebar
 }: TopHeaderProps) {
   const [showAlertMenu, setShowAlertMenu] = useState(false);
   const urgentAlertCount = alerts.filter(a => a.type === 'urgent' || a.type === 'warning').length;
@@ -64,8 +69,25 @@ export default function TopHeader({
       id="top-header"
       className="sticky top-0 h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between shadow-2xs z-20 shrink-0"
     >
-      {/* Left Context: Breadcrumbs and Stage Tag */}
-      <div className="flex items-center space-x-3 truncate">
+      {/* Left Context: Sidebar Toggle Button, Breadcrumbs and Stage Tag */}
+      <div className="flex items-center space-x-3 min-w-0">
+        {onToggleSidebar && (
+          <button
+            type="button"
+            id="btn-toggle-sidebar"
+            onClick={onToggleSidebar}
+            title={isSidebarCollapsed ? "展开左侧边栏 (Ctrl+B)" : "收起左侧边栏 (Ctrl+B)"}
+            aria-label={isSidebarCollapsed ? "展开左侧边栏" : "收起左侧边栏"}
+            className={`h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200 shrink-0 cursor-pointer ${
+              isSidebarCollapsed 
+                ? 'bg-sky-50 border-sky-300 text-sky-700 hover:bg-sky-100 hover:border-sky-400 shadow-2xs' 
+                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300'
+            }`}
+          >
+            <PanelLeft className="h-4.5 w-4.5 transition-transform" />
+          </button>
+        )}
+
         <div className="flex items-baseline space-x-2 truncate">
           <span className="text-sm font-bold text-slate-900 tracking-tight">{currentTabInfo.title}</span>
           <span className="text-xs text-slate-400 hidden md:inline truncate">/ {currentTabInfo.subtitle}</span>

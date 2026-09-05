@@ -76,6 +76,7 @@ interface SidebarProps {
   projects?: ProjectItem[];
   selectedProjectId?: string;
   onSelectProjectItem?: (projectId: string) => void;
+  isCollapsed?: boolean;
 }
 
 export default function Sidebar({
@@ -98,6 +99,7 @@ export default function Sidebar({
   projects = [],
   selectedProjectId,
   onSelectProjectItem,
+  isCollapsed = false,
 }: SidebarProps) {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showCreateSpaceModal, setShowCreateSpaceModal] = useState(false);
@@ -266,9 +268,14 @@ export default function Sidebar({
   return (
     <aside 
       id="app-sidebar"
-      className="w-64 xl:w-72 bg-white border-r border-slate-200 flex flex-col h-screen shrink-0 select-none z-30 transition-all duration-200"
+      className={`bg-white border-r border-slate-200 flex flex-col h-screen shrink-0 select-none z-30 transition-all duration-300 ease-in-out overflow-hidden ${
+        isCollapsed 
+          ? 'w-0 border-r-0 opacity-0 pointer-events-none' 
+          : 'w-64 xl:w-72 opacity-100'
+      }`}
     >
-      {/* Sidebar Header: Logo & Platform Title & University Badge */}
+      <div className="w-64 xl:w-72 flex flex-col h-full shrink-0">
+        {/* Sidebar Header: Logo & Platform Title & University Badge */}
       <div className="h-16 px-4 xl:px-5 border-b border-slate-200 flex items-center space-x-3 bg-white">
         <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center shadow-sm shadow-sky-500/20 shrink-0">
           <Target className="h-5 w-5 text-white" />
@@ -952,6 +959,7 @@ export default function Sidebar({
           </div>
         </div>
       )}
+      </div>
     </aside>
   );
 }

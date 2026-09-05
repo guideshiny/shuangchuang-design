@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar, { TabType } from './components/Sidebar';
 import TopHeader from './components/TopHeader';
 import CockpitDashboard from './components/CockpitDashboard';
@@ -107,6 +107,21 @@ export default function App() {
   const [activeTeamProjectId, setActiveTeamProjectId] = useState<string>(() => {
     return session?.projectId || mockProjects[0]?.id || 'proj-001';
   });
+
+  // Global Left Sidebar Collapse State (across all roles)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsSidebarCollapsed(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLoginSuccess = (newSession: UserSession) => {
     setSession(newSession);
@@ -360,6 +375,7 @@ export default function App() {
           const p = projects.find(proj => proj.id === projId);
           if (p) setSelectedProject(p);
         }}
+        isCollapsed={isSidebarCollapsed}
       />
 
       {/* Right Column: Clean Top Status Bar & Workspace */}
@@ -377,6 +393,8 @@ export default function App() {
           alerts={alerts}
           onSelectProjectFromAlert={handleSelectProjectById}
           currentProject={currentMemberProject}
+          isSidebarCollapsed={isSidebarCollapsed}
+          onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
         />
 
         {/* Main Content Area */}
