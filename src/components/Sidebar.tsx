@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   BarChart3, 
   Layers, 
@@ -31,9 +31,12 @@ import {
   Trash2,
   X,
   Swords,
-  Workflow
+  Workflow,
+  Search,
+  Check,
+  CheckCircle2
 } from 'lucide-react';
-import { UserSession, ProjectSpace, CoachSession } from '../types';
+import { UserSession, ProjectSpace, CoachSession, ProjectItem } from '../types';
 import { cleanSessionTitle } from '../utils/titleUtils';
 
 export type TabType = 
@@ -69,6 +72,10 @@ interface SidebarProps {
   onCreateSpace?: (newSpace: { name: string; trackTag: string; school: string; leader: string }) => void;
   onCreateSession?: (spaceId: string) => void;
   onDeleteSession?: (spaceId: string, sessionId: string) => void;
+  // Global Project Selection for Team Member
+  projects?: ProjectItem[];
+  selectedProjectId?: string;
+  onSelectProjectItem?: (projectId: string) => void;
 }
 
 export default function Sidebar({
@@ -88,12 +95,52 @@ export default function Sidebar({
   onCreateSpace,
   onCreateSession,
   onDeleteSession,
+  projects = [],
+  selectedProjectId,
+  onSelectProjectItem,
 }: SidebarProps) {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const [showCreateSpaceModal, setShowCreateSpaceModal] = useState(false);
   const [isSessionsExpanded, setIsSessionsExpanded] = useState(true);
   const [isSpacesExpanded, setIsSpacesExpanded] = useState(true);
   const [expandedSpaceIds, setExpandedSpaceIds] = useState<Set<string>>(() => new Set(spaces.map(s => s.id)));
+
+  // Team Member Project Selector State
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const projectDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (projectDropdownRef.current && !projectDropdownRef.current.contains(event.target as Node)) {
+        setIsProjectDropdownOpen(false);
+      }
+    };
+    if (isProjectDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProjectDropdownOpen]);
+
+  const currentSelectedProject = projects.find(p => p.id === selectedProjectId) || projects[0];
+
+  const filteredProjects = projects.filter(p => {
+    if (!projectSearchQuery.trim()) return true;
+    const q = projectSearchQuery.toLowerCase();
+    return p.name.toLowerCase().includes(q) || 
+           p.code.toLowerCase().includes(q) || 
+           p.leader.toLowerCase().includes(q) ||
+           p.trackLabel.toLowerCase().includes(q);
+  });
+
+  const handleChooseProject = (projectId: string) => {
+    onSelectProjectItem?.(projectId);
+    setIsProjectDropdownOpen(false);
+    setProjectSearchQuery('');
+  };
 
   // New Space Form State
   const [newSpaceForm, setNewSpaceForm] = useState({
@@ -188,6 +235,12 @@ export default function Sidebar({
         ]
       },
       {
+        groupName: 'AI数智备赛教练',
+        items: [
+          { id: 'coach' as TabType, label: 'AI备赛教练 (统一入口)', icon: Bot, badge: 'Hero', highlight: false },
+        ]
+      },
+      {
         groupName: '备赛培育核心',
         items: [
           { id: 'screening' as TabType, label: '智能对标初筛与排名', icon: Layers, badge: '2026细则' },
@@ -240,6 +293,165 @@ export default function Sidebar({
         </div>
       </div>
 
+      {/* Team Member: Global Project Selection Component */}
+      {session.role === 'team_member' && (
+        <div 
+          className="px-3 py-2.5 border-b border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 relative z-30" 
+          ref={projectDropdownRef}
+        >
+          <div className="flex items-center justify-between mb-1.5 px-0.5">
+            <div className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-700">
+              <FolderKanban className="h-3.5 w-3.5 text-sky-600" />
+              <span>当前参赛项目 (全局联动)</span>
+            </div>
+            <span className="text-[10px] text-sky-700 bg-sky-50 border border-sky-200/80 font-semibold px-1.5 py-0.2 rounded-full">
+              共 {projects.length} 项
+            </span>
+          </div>
+
+          {/* Trigger Button */}
+          <button
+            type="button"
+            id="btn-global-project-selector"
+            onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+            className={`w-full text-left rounded-xl p-2.5 transition-all border shadow-2xs group flex items-start justify-between ${
+              isProjectDropdownOpen 
+                ? 'bg-sky-50/50 border-sky-400 ring-2 ring-sky-500/20' 
+                : 'bg-white border-slate-200 hover:border-sky-300 hover:bg-slate-50/50'
+            }`}
+          >
+            <div className="min-w-0 flex-1 pr-2">
+              <div className="flex items-center space-x-1.5 mb-1">
+                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 shrink-0">
+                  {currentSelectedProject?.trackLabel || '主赛道'}
+                </span>
+                {currentSelectedProject?.stageName && (
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                    {currentSelectedProject.stageName}
+                  </span>
+                )}
+                {currentSelectedProject?.grade && (
+                  <span className="text-[10px] font-mono font-bold px-1 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                    {currentSelectedProject.grade}级 · {currentSelectedProject.totalScore}分
+                  </span>
+                )}
+              </div>
+              <div className="text-xs font-bold text-slate-900 group-hover:text-sky-700 truncate leading-snug" title={currentSelectedProject?.name}>
+                {currentSelectedProject?.name || '请选择参赛项目'}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5 truncate flex items-center space-x-1.5">
+                <span>负责人: {currentSelectedProject?.leader || '团队负责人'}</span>
+                <span>•</span>
+                <span>编号: {currentSelectedProject?.code || 'CX2026'}</span>
+              </div>
+            </div>
+            <div className="shrink-0 pt-1">
+              <div className={`p-1 rounded-md bg-slate-100 group-hover:bg-sky-100 transition-colors ${
+                isProjectDropdownOpen ? 'bg-sky-100 text-sky-700' : 'text-slate-400 group-hover:text-sky-600'
+              }`}>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${
+                  isProjectDropdownOpen ? 'rotate-180' : ''
+                }`} />
+              </div>
+            </div>
+          </button>
+
+          {/* Dropdown Panel */}
+          {isProjectDropdownOpen && (
+            <div className="absolute top-full left-3 right-3 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[380px] animate-in fade-in slide-in-from-top-1 duration-150">
+              {/* Dropdown Header & Search */}
+              <div className="p-2.5 border-b border-slate-100 bg-slate-50/80 space-y-2">
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="font-bold text-slate-700">切换当前参赛项目</span>
+                  <span className="text-slate-400 text-[10px]">全端各模块实时同步</span>
+                </div>
+                <div className="relative">
+                  <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={projectSearchQuery}
+                    onChange={(e) => setProjectSearchQuery(e.target.value)}
+                    placeholder="搜索项目名称、编号或负责人..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    autoFocus
+                  />
+                  {projectSearchQuery && (
+                    <button
+                      onClick={() => setProjectSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Projects List */}
+              <div className="overflow-y-auto p-1.5 space-y-1 divide-y divide-slate-100/60 max-h-[260px]">
+                {filteredProjects.map((proj) => {
+                  const isCurrent = proj.id === currentSelectedProject?.id;
+                  return (
+                    <div
+                      key={proj.id}
+                      onClick={() => handleChooseProject(proj.id)}
+                      className={`p-2 rounded-xl cursor-pointer transition-all flex items-start justify-between group/pitem ${
+                        isCurrent
+                          ? 'bg-sky-50 border border-sky-200/80 text-sky-950 font-medium'
+                          : 'hover:bg-slate-50 text-slate-700 border border-transparent hover:border-slate-200/60'
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1 pr-2">
+                        <div className="flex items-center space-x-1.5 mb-1">
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded font-medium ${
+                            isCurrent ? 'bg-sky-200/60 text-sky-800' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {proj.trackLabel}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {proj.code}
+                          </span>
+                          {proj.grade && (
+                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1 py-0.2 rounded border border-amber-200/60">
+                              {proj.grade}级 · {proj.totalScore}分
+                            </span>
+                          )}
+                        </div>
+                        <div className={`text-xs font-semibold leading-snug line-clamp-2 ${
+                          isCurrent ? 'text-sky-900 font-bold' : 'text-slate-800 group-hover/pitem:text-sky-700'
+                        }`}>
+                          {proj.name}
+                        </div>
+                        <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1">
+                          <span>负责人: {proj.leader}</span>
+                          <span>•</span>
+                          <span>{proj.college}</span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 pt-2">
+                        {isCurrent ? (
+                          <div className="h-5 w-5 rounded-full bg-sky-600 text-white flex items-center justify-center shadow-xs">
+                            <Check className="h-3 w-3" />
+                          </div>
+                        ) : (
+                          <div className="h-5 w-5 rounded-full border border-slate-200 group-hover/pitem:border-sky-400 flex items-center justify-center transition-colors">
+                            <ChevronRight className="h-3 w-3 text-slate-300 group-hover/pitem:text-sky-500" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {filteredProjects.length === 0 && (
+                  <div className="py-6 text-center text-xs text-slate-400">
+                    未检索到匹配的参赛项目
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sidebar Nav Items (Scrollable Body) */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-5 text-xs">
         {navGroups.map((group, groupIdx) => (
@@ -286,94 +498,95 @@ export default function Sidebar({
           </div>
         ))}
 
-        {/* Team Member: 会话列表 (收录无工作空间的独立会话) */}
-        {session.role === 'team_member' && (
-          <>
-            <div className="pt-3 border-t border-slate-200/80 space-y-1">
-              <div className="flex items-center justify-between px-1.5 py-1">
-                <button
-                  onClick={() => setIsSessionsExpanded(!isSessionsExpanded)}
-                  className="flex items-center space-x-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
-                  title="折叠/展开会话列表"
-                >
-                  <span>会话 ({standaloneSessions.length})</span>
-                  <ChevronDown 
-                    className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
-                      isSessionsExpanded ? '' : '-rotate-90'
-                    }`} 
-                  />
-                </button>
-                <button
-                  onClick={() => {
-                    onCreateSession?.('none');
-                    setActiveTab('coach');
-                  }}
-                  className="p-1 rounded-md text-slate-400 hover:text-sky-600 hover:bg-slate-100 transition-colors"
-                  title="新建独立会话"
-                  id="btn-create-standalone-session"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {isSessionsExpanded && (
-                <div className="space-y-0.5 mt-0.5">
-                  {standaloneSessions.map((sess) => {
-                    const isSessionActive = activeTab === 'coach' && (activeSpaceId === 'none' || !activeSpaceId) && sess.id === activeSessionId;
-                    return (
-                      <div
-                        key={sess.id}
-                        onClick={() => {
-                          onSelectSession?.('none', sess.id);
-                          setActiveTab('coach');
-                        }}
-                        className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors cursor-pointer group/sess ${
-                          isSessionActive
-                            ? 'bg-sky-50 text-sky-700 font-medium'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 min-w-0 flex-1">
-                          <MessageSquare className={`h-3.5 w-3.5 flex-shrink-0 ${
-                            isSessionActive ? 'text-sky-600' : 'text-slate-400 group-hover/sess:text-slate-600'
-                          }`} />
-                          <span className="truncate pr-1 text-xs" title={cleanSessionTitle(sess.title)}>
-                            {cleanSessionTitle(sess.title)}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                          <span className={`text-[10px] font-mono whitespace-nowrap ${
-                            isSessionActive ? 'text-sky-600 font-medium' : 'text-slate-400'
-                          }`}>
-                            {sess.time}
-                          </span>
-                          {onDeleteSession && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDeleteSession('none', sess.id);
-                              }}
-                              className="opacity-0 group-hover/sess:opacity-100 p-0.5 hover:text-rose-600 rounded text-slate-400 transition-opacity"
-                              title="删除会话"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {standaloneSessions.length === 0 && (
-                    <div className="px-2 py-2 text-[11px] text-slate-400 italic text-center">
-                      暂无独立会话，点击 + 新建
-                    </div>
-                  )}
-                </div>
-              )}
+        {/* 会话历史列表 (项目组成员 & 学校管理端均可见) */}
+        {(session.role === 'team_member' || session.role === 'school_admin' || session.role === 'system_admin') && (
+          <div className="pt-3 border-t border-slate-200/80 space-y-1">
+            <div className="flex items-center justify-between px-1.5 py-1">
+              <button
+                onClick={() => setIsSessionsExpanded(!isSessionsExpanded)}
+                className="flex items-center space-x-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+                title="折叠/展开会话历史"
+              >
+                <span>会话历史 ({standaloneSessions.length})</span>
+                <ChevronDown 
+                  className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
+                    isSessionsExpanded ? '' : '-rotate-90'
+                  }`} 
+                />
+              </button>
+              <button
+                onClick={() => {
+                  onCreateSession?.('none');
+                  setActiveTab('coach');
+                }}
+                className="p-1 rounded-md text-slate-400 hover:text-sky-600 hover:bg-slate-100 transition-colors"
+                title="新建独立会话"
+                id="btn-create-standalone-session"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
             </div>
 
-            {/* Team Member: 空间列表 (每个空间包含独立工作空间与专属会话) */}
-            <div className="pt-3 border-t border-slate-200/80 space-y-1">
+            {isSessionsExpanded && (
+              <div className="space-y-0.5 mt-0.5">
+                {standaloneSessions.map((sess) => {
+                  const isSessionActive = activeTab === 'coach' && (activeSpaceId === 'none' || !activeSpaceId) && sess.id === activeSessionId;
+                  return (
+                    <div
+                      key={sess.id}
+                      onClick={() => {
+                        onSelectSession?.('none', sess.id);
+                        setActiveTab('coach');
+                      }}
+                      className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors cursor-pointer group/sess ${
+                        isSessionActive
+                          ? 'bg-sky-50 text-sky-700 font-medium'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <MessageSquare className={`h-3.5 w-3.5 flex-shrink-0 ${
+                          isSessionActive ? 'text-sky-600' : 'text-slate-400 group-hover/sess:text-slate-600'
+                        }`} />
+                        <span className="truncate pr-1 text-xs" title={cleanSessionTitle(sess.title)}>
+                          {cleanSessionTitle(sess.title)}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1 flex-shrink-0">
+                        <span className={`text-[10px] font-mono whitespace-nowrap ${
+                          isSessionActive ? 'text-sky-600 font-medium' : 'text-slate-400'
+                        }`}>
+                          {sess.time}
+                        </span>
+                        {onDeleteSession && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteSession('none', sess.id);
+                            }}
+                            className="opacity-0 group-hover/sess:opacity-100 p-0.5 hover:text-rose-600 rounded text-slate-400 transition-opacity"
+                            title="删除会话"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {standaloneSessions.length === 0 && (
+                  <div className="px-2 py-2 text-[11px] text-slate-400 italic text-center">
+                    暂无会话历史，点击 + 新建
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 空间列表 (仅项目组成员可见，学校管理端不包含空间) */}
+        {session.role === 'team_member' && (
+          <div className="pt-3 border-t border-slate-200/80 space-y-1">
               <div className="flex items-center justify-between px-1.5 py-1">
                 <button
                   onClick={() => setIsSpacesExpanded(!isSpacesExpanded)}
@@ -492,7 +705,6 @@ export default function Sidebar({
                 </div>
               )}
             </div>
-          </>
         )}
 
         {/* 常用捷径与工具 */}

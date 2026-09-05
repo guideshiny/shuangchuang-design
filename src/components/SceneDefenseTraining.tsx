@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ProjectItem, UserSession } from '../types';
 import DefenseSelectorScreen from './defense/DefenseSelectorScreen';
 import DefensePrepScreen from './defense/DefensePrepScreen';
@@ -14,19 +14,35 @@ interface SceneDefenseTrainingProps {
 
 export default function SceneDefenseTraining({ currentProject, session }: SceneDefenseTrainingProps) {
   const [view, setView] = useState<'selector' | 'prep' | 'session' | 'report'>('selector');
-  const [selectedProject, setSelectedProject] = useState<DefenseProject>(() => {
-    if (currentProject) {
+
+  const getDefenseProject = (p?: ProjectItem): DefenseProject => {
+    if (p) {
       return {
-        id: currentProject.id,
-        name: currentProject.name,
-        track: `${currentProject.trackLabel} · ${currentProject.groupLabel || '主赛道'}`,
-        summary: currentProject.strengthsLabels?.[0] ? `核心优势：${currentProject.strengthsLabels.join('、')}。重点突破关键测量与精密质检技术壁垒。` : '突破关键测量与精密质检技术壁垒，实现工业产线自主可控。',
-        tags: ['当前参赛项目', '校内A类重点', '知识产权合规', '已入选国赛攻坚'],
+        id: p.id,
+        name: p.name,
+        track: `${p.trackLabel} · ${p.groupLabel || '主赛道'}`,
+        summary: p.strengthsLabels?.[0] 
+          ? `核心优势：${p.strengthsLabels.join('、')}。重点突破关键测量与精密质检技术壁垒。` 
+          : '突破关键测量与精密质检技术壁垒，实现工业产线自主可控。',
+        tags: [
+          p.trackLabel,
+          p.stageName ? `阶段: ${p.stageName}` : '校内A类重点',
+          p.grade ? `评级: ${p.grade}级` : '重点项目',
+          '已入选国赛攻坚'
+        ],
         isCurrentProject: true
       };
     }
     return MOCK_DEFENSE_PROJECTS[0];
-  });
+  };
+
+  const [selectedProject, setSelectedProject] = useState<DefenseProject>(() => getDefenseProject(currentProject));
+
+  useEffect(() => {
+    if (currentProject) {
+      setSelectedProject(getDefenseProject(currentProject));
+    }
+  }, [currentProject?.id, currentProject?.name]);
 
   const [selectedMode, setSelectedMode] = useState<ModeDef>(TRAINING_MODES[0]);
   const [currentConfig, setCurrentConfig] = useState<DefenseSessionConfig>({
@@ -73,7 +89,7 @@ export default function SceneDefenseTraining({ currentProject, session }: SceneD
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full" id="scene-defense-training">
       {view === 'selector' && (
         <DefenseSelectorScreen
           initialProject={selectedProject}

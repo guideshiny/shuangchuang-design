@@ -13,9 +13,10 @@ import {
   Award,
   ShieldCheck,
   Repeat,
-  LogOut
+  LogOut,
+  Folder
 } from 'lucide-react';
-import { NotificationAlert, UserSession } from '../types';
+import { NotificationAlert, UserSession, ProjectItem } from '../types';
 import { TabType } from './Sidebar';
 
 interface TopHeaderProps {
@@ -25,6 +26,7 @@ interface TopHeaderProps {
   onOpenRulesConfig: () => void;
   alerts: NotificationAlert[];
   onSelectProjectFromAlert?: (projectId: string) => void;
+  currentProject?: ProjectItem;
 }
 
 export default function TopHeader({
@@ -33,7 +35,8 @@ export default function TopHeader({
   onLogout,
   onOpenRulesConfig,
   alerts,
-  onSelectProjectFromAlert
+  onSelectProjectFromAlert,
+  currentProject
 }: TopHeaderProps) {
   const [showAlertMenu, setShowAlertMenu] = useState(false);
   const urgentAlertCount = alerts.filter(a => a.type === 'urgent' || a.type === 'warning').length;
@@ -81,6 +84,17 @@ export default function TopHeader({
           <div className="hidden sm:flex items-center space-x-1 text-xs text-sky-800 bg-sky-50 border border-sky-200 px-2.5 py-1 rounded-lg font-semibold">
             <Building className="h-3.5 w-3.5 text-sky-600" />
             <span>{session.university}</span>
+          </div>
+        )}
+
+        {/* Global Active Project Badge (for team_member) */}
+        {session.role === 'team_member' && currentProject && (
+          <div 
+            className="hidden xl:flex items-center space-x-1.5 text-xs text-sky-800 bg-sky-50/80 border border-sky-200/80 px-2.5 py-1 rounded-lg font-medium max-w-[240px] truncate"
+            title={`当前全局参赛项目: ${currentProject.name}`}
+          >
+            <Folder className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+            <span className="truncate font-semibold">{currentProject.name}</span>
           </div>
         )}
 

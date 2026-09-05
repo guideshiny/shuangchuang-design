@@ -103,6 +103,11 @@ export default function App() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
+  // Global Active Project for Team Member (persists throughout session)
+  const [activeTeamProjectId, setActiveTeamProjectId] = useState<string>(() => {
+    return session?.projectId || mockProjects[0]?.id || 'proj-001';
+  });
+
   const handleLoginSuccess = (newSession: UserSession) => {
     setSession(newSession);
     try {
@@ -113,7 +118,9 @@ export default function App() {
 
     if (newSession.role === 'team_member') {
       setActiveTab('coach');
-      const myProj = projects.find(p => p.id === newSession.projectId) || projects[0];
+      const defaultProjId = newSession.projectId || projects[0]?.id || 'proj-001';
+      setActiveTeamProjectId(defaultProjId);
+      const myProj = projects.find(p => p.id === defaultProjId) || projects[0];
       setSelectedProject(myProj);
     } else if (newSession.role === 'mentor') {
       setActiveTab('supervision');
@@ -320,8 +327,10 @@ export default function App() {
     return <LoginPage onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Get active team project for member
-  const currentMemberProject = projects.find(p => p.id === session.projectId) || projects[0];
+  // Get active team project for member (globally selected from sidebar)
+  const currentMemberProject = projects.find(p => p.id === activeTeamProjectId) || 
+                               projects.find(p => p.id === session.projectId) || 
+                               projects[0];
   const currentActiveSpace = spaces.find(s => s.id === activeSpaceId) || null;
 
   return (
@@ -344,10 +353,21 @@ export default function App() {
         onCreateSpace={handleCreateSpace}
         onCreateSession={handleCreateSession}
         onDeleteSession={handleDeleteSession}
+        projects={projects}
+        selectedProjectId={currentMemberProject?.id}
+        onSelectProjectItem={(projId) => {
+          setActiveTeamProjectId(projId);
+          const p = projects.find(proj => proj.id === projId);
+          if (p) setSelectedProject(p);
+        }}
       />
 
       {/* Right Column: Clean Top Status Bar & Workspace */}
-      <div className="flex-1 flex flex-col h-full overflow-y-auto">
+      <div className={`flex-1 flex flex-col h-full min-w-0 ${
+        ['coach', 'guidance_workbench'].includes(activeTab) 
+          ? 'overflow-hidden' 
+          : 'overflow-y-auto'
+      }`}>
         {/* Top Status Bar */}
         <TopHeader
           activeTab={activeTab}
@@ -356,10 +376,15 @@ export default function App() {
           onOpenRulesConfig={() => setIsRulesModalOpen(true)}
           alerts={alerts}
           onSelectProjectFromAlert={handleSelectProjectById}
+          currentProject={currentMemberProject}
         />
 
         {/* Main Content Area */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
+        <main className={`flex-1 min-w-0 ${
+          ['coach', 'guidance_workbench'].includes(activeTab)
+            ? 'h-[calc(100vh-4rem)] overflow-hidden p-0 space-y-0 flex flex-col'
+            : 'p-4 sm:p-6 lg:p-8 space-y-6'
+        }`}>
           {/* Shuangchuang-AI Integrated Modules */}
           {activeTab === 'coach' && (
             <SceneAICoach
@@ -477,10 +502,12 @@ export default function App() {
           )}
         </main>
 
-        {/* Global Compact Footer */}
-        <footer className="border-t border-slate-200 bg-white py-2.5 px-6 text-center text-[11px] text-slate-400 shrink-0">
-          <span>{session.university ? `${session.university} · ` : ''}2026年中国国际大学生创新大赛 · 双创数智中枢 | 4端协同 · 金牌培育 · 全流程督导闭环</span>
-        </footer>
+        {/* Global Compact Footer (shown only for regular dashboard tabs) */}
+        {!['coach', 'guidance_workbench'].includes(activeTab) && (
+          <footer className="border-t border-slate-200 bg-white py-2.5 px-6 text-center text-[11px] text-slate-400 shrink-0">
+            <span>{session.university ? `${session.university} · ` : ''}2026年中国国际大学生创新大赛 · 双创数智中枢 | 4端协同 · 金牌培育 · 全流程督导闭环</span>
+          </footer>
+        )}
       </div>
 
       {/* Project Detail Deep-Dive Drawer */}

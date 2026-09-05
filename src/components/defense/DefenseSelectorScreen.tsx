@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Folder, 
@@ -33,6 +33,13 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
   const [selectedMode, setSelectedMode] = useState<ModeDef | null>(TRAINING_MODES[0]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // Synchronize with global project selected in sidebar
+  useEffect(() => {
+    if (initialProject) {
+      setSelectedProject(initialProject);
+    }
+  }, [initialProject?.id, initialProject?.name]);
+
   // Configuration state
   const [config, setConfig] = useState<DefenseSessionConfig>({
     judgeMode: 'single',
@@ -55,7 +62,7 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
   };
 
   return (
-    <div className="space-y-8 pb-16">
+    <div className="space-y-8 pb-16" id="defense-selector-screen">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -90,78 +97,43 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
         </div>
       </div>
 
-      {/* 1. Project Selection */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-              <Folder size={18} />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">第一步：选择答辩项目</h2>
-              <p className="text-xs text-slate-500">选择要带入模拟答辩舱的项目，系统将自动解构项目计划书并生成针对性靶向考题</p>
-            </div>
+      {/* Current Active Project Banner (Synchronized Globally with Left Sidebar) */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 mt-0.5">
+            <Folder size={20} />
           </div>
-          <span className="text-xs text-slate-400 font-medium">共 {MOCK_DEFENSE_PROJECTS.length} 个可用项目</span>
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
+                {selectedProject.track}
+              </span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                <CheckCircle2 size={11} />
+                <span>当前参赛答辩项目</span>
+              </span>
+              {selectedProject.tags.map(tag => (
+                <span key={tag} className="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/60 hidden sm:inline-block">
+                  {tag}
+                </span>
+              ))}
+            </div>
+            <h2 className="text-base font-bold text-slate-900 truncate" title={selectedProject.name}>
+              {selectedProject.name}
+            </h2>
+            <p className="text-xs text-slate-500 line-clamp-1">
+              {selectedProject.summary}
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {MOCK_DEFENSE_PROJECTS.map((proj) => {
-            const isSelected = selectedProject?.id === proj.id;
-            return (
-              <div
-                key={proj.id}
-                onClick={() => setSelectedProject(proj)}
-                className={`relative rounded-2xl p-5 cursor-pointer transition-all duration-200 border flex flex-col justify-between ${
-                  isSelected
-                    ? 'bg-indigo-50/40 border-indigo-500 shadow-sm ring-2 ring-indigo-500/20'
-                    : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-xs'
-                }`}
-              >
-                {isSelected && (
-                  <div className="absolute top-3.5 right-3.5 flex items-center gap-1 text-[11px] font-bold text-indigo-600 bg-indigo-100/80 px-2 py-0.5 rounded-full">
-                    <CheckCircle2 size={12} />
-                    <span>已选定</span>
-                  </div>
-                )}
-
-                <div>
-                  <div className="mb-2.5 flex flex-wrap gap-1.5 items-center">
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                      {proj.track}
-                    </span>
-                    {proj.isCurrentProject && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                        当前参赛项目
-                      </span>
-                    )}
-                  </div>
-
-                  <h3 className="text-sm font-bold text-slate-900 mb-2 line-clamp-2 leading-snug">
-                    {proj.name}
-                  </h3>
-                  <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3">
-                    {proj.summary}
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 pt-2 border-t border-slate-100">
-                  {proj.tags.slice(0, 3).map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+        <div className="flex items-center gap-2 shrink-0 md:self-center bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80 text-xs text-slate-500">
+          <Info size={14} className="text-indigo-500 shrink-0" />
+          <span>全局选定项目 · 更换请在左侧边栏顶部的【当前参赛项目】中切换</span>
         </div>
-      </section>
+      </div>
 
-      {/* 2. Mode Selection */}
+      {/* Mode Selection */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -169,8 +141,8 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
               <SlidersHorizontal size={18} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">第二步：选择实训模式与配置</h2>
-              <p className="text-xs text-slate-500">点击模式卡片可展开右侧详细参数配置（轮次、单题时限、评委风格）</p>
+              <h2 className="text-base font-bold text-slate-900">选择实训模式与参数配置</h2>
+              <p className="text-xs text-slate-500">点击模式卡片可展开右侧详细参数配置（轮次、单题时限、评委风格），配置完毕即可进入答辩舱实训</p>
             </div>
           </div>
         </div>

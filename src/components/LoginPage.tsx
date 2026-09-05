@@ -26,18 +26,18 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
-  const [activeRole, setActiveRole] = useState<PortalRole>('school_admin');
+  const [activeRole, setActiveRole] = useState<PortalRole>('team_member');
   
   // Form State
   const [selectedUniversity, setSelectedUniversity] = useState<string>('同济大学');
   const [universitySearch, setUniversitySearch] = useState<string>('');
   const [isUniDropdownOpen, setIsUniDropdownOpen] = useState<boolean>(false);
   
-  const [account, setAccount] = useState<string>('T20180412');
-  const [password, setPassword] = useState<string>('admin888');
+  const [account, setAccount] = useState<string>('S20220199');
+  const [password, setPassword] = useState<string>('123456');
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [userName, setUserName] = useState<string>('陈建国');
-  const [collegeOrDept, setCollegeOrDept] = useState<string>('创新创业学院');
+  const [userName, setUserName] = useState<string>('林子越');
+  const [collegeOrDept, setCollegeOrDept] = useState<string>('电子与信息工程学院');
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Handle switching roles

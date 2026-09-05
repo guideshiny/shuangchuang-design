@@ -1873,7 +1873,7 @@ export default function SceneAICoach({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-[calc(100vh-4rem)] bg-[#F5F5F7] text-[#1D1D1F] select-none relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full min-h-0 bg-[#F5F5F7] text-[#1D1D1F] select-none relative overflow-hidden">
       {/* ------------------------------------------------------------- */}
       {/* MAIN FULL-WIDTH CHAT WORKSPACE                                */}
       {/* ------------------------------------------------------------- */}
@@ -1942,74 +1942,47 @@ export default function SceneAICoach({
           </div>
         </div>
 
-        {/* Main Workspace Area: New Session Interface vs. Active Chat Stream */}
-        {messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-4xl mx-auto w-full text-center overflow-y-auto">
-            {/* Mascot Greeting */}
-            <div className="mb-3">
-              <AiMascot size={72} showSpeaker={true} className="hover:scale-105 transition-transform" />
-            </div>
+        {/* Main Workspace Area: Fixed Layout with Upper Scrollable Viewport and Bottom-Docked Input Bar */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+          {/* Scrollable Message / Greeting Area */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6 flex justify-center">
+            {messages.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-4xl mx-auto w-full text-center my-auto">
+                {/* Mascot Greeting */}
+                <div className="mb-3">
+                  <AiMascot size={72} showSpeaker={true} className="hover:scale-105 transition-transform" />
+                </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-              开启新的备赛辅导会话
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-500 max-w-lg mt-1.5 leading-relaxed">
-              选择专家智能体、绑定工作空间与技能，点击推荐任务载入提示词后即可发起冲刺咨询
-            </p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+                  开启新的备赛辅导会话
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500 max-w-lg mt-1.5 leading-relaxed">
+                  选择专家智能体、绑定工作空间与技能，在下方输入框提问或点击推荐任务发起冲刺咨询
+                </p>
 
-            {/* Quick Badges Row */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4 mb-6 text-xs font-mono">
-              <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                <span className="text-amber-500">📁</span>
-                <span>空间: {activeSpace && activeSpaceId !== 'none' ? activeSpace.name : '无工作空间'}</span>
+                {/* Quick Badges Row */}
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-4 mb-2 text-xs font-mono">
+                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
+                    <span className="text-amber-500">📁</span>
+                    <span>空间: {activeSpace && activeSpaceId !== 'none' ? activeSpace.name : '无工作空间'}</span>
+                  </div>
+                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
+                    <span className="text-blue-500">🤖</span>
+                    <span>专家: {selectedAgentId === 'diagnosis' ? '诊断与指导专家' : '答辩专家'}</span>
+                  </div>
+                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
+                    <span className="text-indigo-500">⚡</span>
+                    <span>技能: {selectedSkillIds.length} 项启用</span>
+                  </div>
+                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
+                    <span className="text-emerald-500">🔌</span>
+                    <span>MCP: {selectedMcpIds.length} 个连接</span>
+                  </div>
+                </div>
               </div>
-              <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                <span className="text-blue-500">🤖</span>
-                <span>专家: {selectedAgentId === 'diagnosis' ? '诊断与指导专家' : '答辩专家'}</span>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                <span className="text-indigo-500">⚡</span>
-                <span>技能: {selectedSkillIds.length} 项启用</span>
-              </div>
-              <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                <span className="text-emerald-500">🔌</span>
-                <span>MCP: {selectedMcpIds.length} 个连接</span>
-              </div>
-            </div>
-
-            {/* Centered Composer Card matching reference design */}
-            <div className="w-full max-w-4xl text-left">
-              <ChatComposer
-                inputValue={inputValue}
-                setInputValue={setInputValue}
-                onSend={handleSendMessage}
-                isThinking={isThinking}
-                spaces={spaces}
-                activeSpace={activeSpace}
-                activeSpaceId={activeSpaceId || (activeSpace?.id || 'none')}
-                onSelectSpace={onSelectSpace || (() => {})}
-                onCreateSpace={onCreateSpace || (() => {})}
-                selectedAgentId={selectedAgentId}
-                onSelectAgent={setSelectedAgentId}
-                selectedSkillIds={selectedSkillIds}
-                onToggleSkill={handleToggleSkill}
-                selectedMcpIds={selectedMcpIds}
-                onToggleMcp={handleToggleMcp}
-                onOpenFlywheelModal={() => setShowFlywheelModal(true)}
-                isNewSessionMode={true}
-                availableFiles={sharedFiles}
-                mentionedFiles={mentionedFiles}
-                onAddMentionFile={handleAddMentionFile}
-                onRemoveMentionFile={handleRemoveMentionFile}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {/* Message Stream Area */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex justify-center">
+            ) : (
               <div className="w-full max-w-4xl space-y-6">
-          {messages.map((msg) => {
+                {messages.map((msg) => {
             const isCoach = msg.sender === 'coach';
             const isStudent = msg.sender === 'student';
             const isSystem = msg.sender === 'system';
@@ -2777,12 +2750,13 @@ export default function SceneAICoach({
             </div>
           )}
 
-              <div ref={messagesEndRef} />
-            </div>
+                <div ref={messagesEndRef} />
+              </div>
+            )}
           </div>
 
-          {/* Bottom Docked ChatComposer */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-[#FBFBFC] border-t border-gray-200 flex-shrink-0 flex justify-center shadow-xs">
+          {/* Bottom Docked ChatComposer: Permanently fixed to the bottom */}
+          <div className="sticky bottom-0 z-30 px-4 sm:px-6 py-3 sm:py-4 bg-[#FBFBFC]/95 backdrop-blur-xs border-t border-gray-200/90 flex-shrink-0 flex justify-center shadow-lg">
             <div className="w-full max-w-4xl">
               {autoPromptHint && (
                 <div className="mb-2.5 flex items-center justify-between px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 text-blue-950 text-xs shadow-2xs">
@@ -2816,7 +2790,7 @@ export default function SceneAICoach({
                 selectedMcpIds={selectedMcpIds}
                 onToggleMcp={handleToggleMcp}
                 onOpenFlywheelModal={() => setShowFlywheelModal(true)}
-                isNewSessionMode={false}
+                isNewSessionMode={messages.length === 0}
                 availableFiles={sharedFiles}
                 mentionedFiles={mentionedFiles}
                 onAddMentionFile={handleAddMentionFile}
@@ -2829,7 +2803,6 @@ export default function SceneAICoach({
             </div>
           </div>
         </div>
-      )}
       </div>
 
       {/* ------------------------------------------------------------- */}
