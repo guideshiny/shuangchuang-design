@@ -11,10 +11,11 @@ import {
   UploadCloud, FileText, ArrowRight, ShieldCheck, 
   Search, RefreshCw, Award, Scale, Building2, 
   SlidersHorizontal, ChevronDown, Check, Eye, Folder, Cloud, HardDrive,
-  Plus, MessageSquarePlus, Activity, Paperclip
+  Plus, MessageSquarePlus, Activity, Paperclip, Presentation
 } from 'lucide-react';
 import RadarChart from './RadarChart';
 import SharedWorkspaceDrawer from './SharedWorkspaceDrawer';
+import { ALL_PROJECT_DELIVERABLES } from './RightWorkspacePanel';
 import OperationFlywheelModal from './OperationFlywheelModal';
 import ChatComposer from './ChatComposer';
 import AiMascot from './AiMascot';
@@ -93,6 +94,10 @@ interface SceneAICoachProps {
   onCreateSession?: (spaceId: string) => void;
   onSyncWorkspace?: (spaceId: string) => void;
   onUpdateSessionTitle?: (spaceId: string, sessionId: string, newTitle: string) => void;
+  isRightWorkspaceOpen?: boolean;
+  onToggleRightWorkspace?: () => void;
+  onSetRightWorkspaceOpen?: (open: boolean) => void;
+  onOpenFileInRightWorkspace?: (file: AssociatedFileItem) => void;
 }
 
 export default function SceneAICoach({ 
@@ -107,12 +112,25 @@ export default function SceneAICoach({
   onSelectSession,
   onCreateSession,
   onSyncWorkspace,
-  onUpdateSessionTitle 
+  onUpdateSessionTitle,
+  isRightWorkspaceOpen,
+  onToggleRightWorkspace,
+  onSetRightWorkspaceOpen,
+  onOpenFileInRightWorkspace
 }: SceneAICoachProps) {
   // 1. Core State
   const [selectedUniversity, setSelectedUniversity] = useState<UniversityOption>(mockUniversities[0]); // Default XMU
   const [currentStage, setCurrentStage] = useState<'L1' | 'L2' | 'L3' | 'L4'>('L3');
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState<boolean>(false);
+
+  const handleOpenFileInRightWorkspace = (file: AssociatedFileItem) => {
+    if (onOpenFileInRightWorkspace) {
+      onOpenFileInRightWorkspace(file);
+    } else if (onSetRightWorkspaceOpen) {
+      onSetRightWorkspaceOpen(true);
+    }
+  };
+
   const [showFlywheelModal, setShowFlywheelModal] = useState<boolean>(false);
   const [bpUploaded, setBpUploaded] = useState<boolean>(true);
   const [inputValue, setInputValue] = useState<string>('');
@@ -1496,6 +1514,34 @@ export default function SceneAICoach({
   const handleCustomTextQuery = (text: string, appendUserMsg: boolean = false) => {
     const lower = text.toLowerCase();
 
+    // 0. PPT重新生成/演进路标导出意图匹配 (在对话流中展示快捷方式并自动打开右侧独立区域)
+    if (lower.includes('ppt') || lower.includes('路标') || lower.includes('幻灯片') || lower.includes('重新输出') || lower.includes('详细点') || lower.includes('生成文件')) {
+      setTimeout(() => {
+        const pptFile: AssociatedFileItem = {
+          id: 'art-ppt-1',
+          name: '安里AI_BP补充_项目路标.pptx',
+          type: 'ppt',
+          typeLabel: '路演汇报幻灯片 (Deck)',
+          size: '31.3 KB',
+          updateTime: '刚刚',
+          status: 'ready'
+        };
+        const pptMsg: ChatMessage = {
+          id: `msg-gen-ppt-${Date.now()}`,
+          sender: 'coach',
+          type: 'text',
+          text: `已完成 2m33s >\n\nPPT已重新生成。和上一版相比，每个格子的内容大幅扩充：\n\n**产品里程碑（内容最多）：**\n• P1：完整列出Assistant助手7项功能、数据脱敏4项、案件库2项、评估能力2项\n• P2：SaaS产品化、合规完成、Assistant扩展、Workflows+多Agent、自建替代各模块子项都展开\n• P3/P4：全流程AI化各环节、Agent Platform客户化、生态化等细节保留\n\n**场景深度：**\n• P1：验证目标、覆盖范围、交付流程都保留\n• P2：刑事+知产各自的具体功能和适用场景展开\n• P3：立案→举证→庭审→判决→执行每个环节的AI能力都列出\n• P4：融资、匹配、闭环、分成模式的完整链条\n\n**客户/收入/融资：** 每个格子的数字、条件、时间窗口等细节全部保留，没有压缩。\n\n字体用了7-8pt来容纳更多内容，打开看看排版是否合适，有需要调整的告诉我。`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          generatedFiles: [pptFile],
+          changesCount: 2
+        };
+        setMessages(prev => [...prev, pptMsg]);
+        setIsThinking(false);
+        handleOpenFileInRightWorkspace(pptFile);
+      }, 500);
+      return;
+    }
+
     // 1. 深度调用一键确认与执行匹配
     if (lower.includes('已确认') && (lower.includes('4.2') || lower.includes('4.3') || lower.includes('物料') || lower.includes('配置') || lower.includes('引擎'))) {
       handleExecuteDeepCall({
@@ -2606,6 +2652,68 @@ export default function SceneAICoach({
                         <span className="text-gray-400 italic">AI 生成，仅供参考</span>
                       </div>
                     )}
+
+                    {/* Generated Artifacts Shortcut Card (Matching Screenshot) */}
+                    {msg.generatedFiles && msg.generatedFiles.length > 0 && (
+                      <div className="mt-3.5 pt-3 border-t border-gray-100 space-y-2.5">
+                        {msg.generatedFiles.map((file) => (
+                          <div
+                            key={file.id}
+                            onClick={() => handleOpenFileInRightWorkspace(file)}
+                            className="group flex items-center justify-between p-3 rounded-xl bg-orange-50/70 hover:bg-orange-100/80 border border-orange-200/80 hover:border-orange-300 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                          >
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <div className="h-10 w-10 rounded-lg bg-orange-500/10 border border-orange-300/60 flex items-center justify-center text-orange-600 shrink-0 group-hover:scale-105 transition-transform">
+                                <Presentation className="h-5 w-5" />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-semibold text-slate-900 truncate group-hover:text-orange-700 transition-colors">
+                                  {file.name}
+                                </span>
+                                <span className="text-[11px] text-slate-400 font-mono mt-0.5">
+                                  {file.size}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1 text-xs text-orange-600 font-medium shrink-0 pl-2">
+                              <span>在右侧独立区域打开</span>
+                              <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Quick Action Links matching screenshot */}
+                        <div className="flex items-center space-x-4 text-xs font-medium text-slate-500 pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (msg.generatedFiles && msg.generatedFiles.length > 0) {
+                                handleOpenFileInRightWorkspace(msg.generatedFiles[0]);
+                              } else if (onToggleRightWorkspace) {
+                                onToggleRightWorkspace();
+                              }
+                            }}
+                            className="hover:text-sky-600 flex items-center space-x-1 transition-colors cursor-pointer"
+                          >
+                            <span>查看所有产物 ({ALL_PROJECT_DELIVERABLES.length})</span>
+                            <ChevronRight className="h-3 w-3 text-slate-400" />
+                          </button>
+                          <span className="text-slate-300">·</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (msg.generatedFiles && msg.generatedFiles.length > 0) {
+                                handleOpenFileInRightWorkspace(msg.generatedFiles[0]);
+                              }
+                            }}
+                            className="hover:text-sky-600 flex items-center space-x-1 transition-colors cursor-pointer"
+                          >
+                            <span>查看所有变更 ({msg.changesCount || 2})</span>
+                            <ChevronRight className="h-3 w-3 text-slate-400" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Timestamp & System disclaimer & Quick Like/Dislike for coach messages */}
@@ -2734,7 +2842,7 @@ export default function SceneAICoach({
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* COLUMN 3: RIGHT DRAWER (Shared Workspace Content)            */}
+      {/* COLUMN 4: SHARED WORKSPACE DRAWER (Legacy drawer)             */}
       {/* ------------------------------------------------------------- */}
       <SharedWorkspaceDrawer
         isOpen={isWorkspaceOpen}

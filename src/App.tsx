@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar, { TabType } from './components/Sidebar';
 import TopHeader from './components/TopHeader';
 import CockpitDashboard from './components/CockpitDashboard';
@@ -23,6 +23,7 @@ import ProjectMemberWorkbench from './components/ProjectMemberWorkbench';
 import SceneAICoach from './components/SceneAICoach';
 import SceneDefenseTraining from './components/SceneDefenseTraining';
 import { SceneGuidanceWorkbench } from './components/SceneGuidanceWorkbench';
+import RightWorkspacePanel from './components/RightWorkspacePanel';
 
 import { mockProjects } from './data/mockProjects';
 import { mockMentors, mockWorkOrders, mockCohortTasks, mockAlerts } from './data/mockMentors';
@@ -33,7 +34,8 @@ import {
   CohortBatchTask, 
   UserSession,
   ProjectSpace,
-  CoachSession
+  CoachSession,
+  AssociatedFileItem
 } from './types';
 
 export default function App() {
@@ -85,12 +87,150 @@ export default function App() {
   // Global Left Sidebar Collapse State (across all roles)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Keyboard shortcut Ctrl+B or Cmd+B to toggle sidebar
+  // Global Right Independent Workspace Expand/Collapse & Tabs State (Placed at the very right of the entire page)
+  const [isRightWorkspaceOpen, setIsRightWorkspaceOpen] = useState(true);
+  
+  // Calculate initial right workspace width for 6:4 default ratio (right workspace is exactly 40%)
+  const calculateDefaultRightWidth = () => {
+    if (typeof window === 'undefined') return 560;
+    const sidebarWidth = isSidebarCollapsed ? 64 : 240;
+    const availableWidth = window.innerWidth - sidebarWidth;
+    return Math.max(300, Math.round(availableWidth * 0.4));
+  };
+
+  const [rightWorkspaceWidthPx, setRightWorkspaceWidthPx] = useState<number>(calculateDefaultRightWidth);
+  const [isDraggingWorkspace, setIsDraggingWorkspace] = useState<boolean>(false);
+  const [isWorkspaceExpandedFull, setIsWorkspaceExpandedFull] = useState<boolean>(false);
+  const [activeWorkspaceFileId, setActiveWorkspaceFileId] = useState<string>('art-ppt-1');
+  const [openWorkspaceTabs, setOpenWorkspaceTabs] = useState<string[]>(['art-ppt-1', 'art-xlsx-1', 'art-doc-1']);
+
+  const handleOpenFileInRightWorkspace = (file: AssociatedFileItem) => {
+    setIsRightWorkspaceOpen(true);
+    setActiveWorkspaceFileId(file.id);
+    setOpenWorkspaceTabs(prev => {
+      if (!prev.includes(file.id)) {
+        return [...prev, file.id];
+      }
+      return prev;
+    });
+  };
+
+  const handleCloseWorkspaceTab = (fileId: string) => {
+    setOpenWorkspaceTabs(prev => {
+      const next = prev.filter(t => t !== fileId);
+      if (activeWorkspaceFileId === fileId && next.length > 0) {
+        setActiveWorkspaceFileId(next[next.length - 1]);
+      }
+      return next;
+    });
+  };
+
+  const handleAddWorkspaceTab = (fileId: string) => {
+    if (!openWorkspaceTabs.includes(fileId)) {
+      setOpenWorkspaceTabs(prev => [...prev, fileId]);
+    }
+    setActiveWorkspaceFileId(fileId);
+  };
+
+  // Window resize handler: Keep right workspace within reasonable bounds
+  useEffect(() => {
+    const handleResize = () => {
+      const sidebarWidth = isSidebarCollapsed ? 64 : 240;
+      const availableWidth = window.innerWidth - sidebarWidth;
+      const maxAllowed = Math.max(300, availableWidth - 360);
+      setRightWorkspaceWidthPx(prev => Math.min(Math.max(280, prev), maxAllowed));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarCollapsed]);
+
+  // Pointer drag-to-resize handler: 100% pixel-accurate follower
+  const handlePointerDownResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+    setIsDraggingWorkspace(true);
+  };
+
+  const handlePointerMoveResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingWorkspace) return;
+    const windowWidth = window.innerWidth;
+    const sidebarWidth = isSidebarCollapsed ? 64 : 240;
+    const availableWidth = windowWidth - sidebarWidth;
+    if (availableWidth <= 0) return;
+
+    // Right workspace width is exactly the distance from the right edge of screen to mouse pointer
+    const rawRightWidth = windowWidth - e.clientX;
+    const minWidth = 300;
+    const maxWidth = Math.max(minWidth, availableWidth - 360);
+    const clamped = Math.min(Math.max(rawRightWidth, minWidth), maxWidth);
+
+    setRightWorkspaceWidthPx(clamped);
+  };
+
+  const handlePointerUpResize = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDraggingWorkspace) {
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // ignore
+      }
+      setIsDraggingWorkspace(false);
+    }
+  };
+
+  // Global window mousemove/mouseup fallback guarantee
+  useEffect(() => {
+    if (!isDraggingWorkspace) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      const windowWidth = window.innerWidth;
+      const sidebarWidth = isSidebarCollapsed ? 64 : 240;
+      const availableWidth = windowWidth - sidebarWidth;
+      if (availableWidth <= 0) return;
+
+      const rawRightWidth = windowWidth - e.clientX;
+      const minWidth = 300;
+      const maxWidth = Math.max(minWidth, availableWidth - 360);
+      const clamped = Math.min(Math.max(rawRightWidth, minWidth), maxWidth);
+      setRightWorkspaceWidthPx(clamped);
+    };
+
+    const handleWindowMouseUp = () => {
+      setIsDraggingWorkspace(false);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [isDraggingWorkspace, isSidebarCollapsed]);
+
+  // Reset to exact 6:4 default ratio on double click
+  const handleResetWorkspaceRatio = () => {
+    const sidebarWidth = isSidebarCollapsed ? 64 : 240;
+    const availableWidth = window.innerWidth - sidebarWidth;
+    setRightWorkspaceWidthPx(Math.round(availableWidth * 0.4));
+  };
+
+  // Keyboard shortcuts: Ctrl/Cmd+B for Left Sidebar, Ctrl/Cmd+J for Right Independent Workspace
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
         e.preventDefault();
         setIsSidebarCollapsed(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        setIsRightWorkspaceOpen(prev => !prev);
+      }
+      if (e.key === 'Escape') {
+        setIsWorkspaceExpandedFull(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -325,7 +465,7 @@ export default function App() {
   const currentActiveSpace = spaces.find(s => s.id === activeSpaceId) || null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-sky-500 selection:text-white">
+    <div className={`flex h-screen overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-sky-500 selection:text-white ${isDraggingWorkspace ? 'cursor-col-resize select-none' : ''}`}>
       {/* Left Sidebar: Role-based Navigation & Sessions/Spaces Management */}
       <Sidebar
         activeTab={activeTab}
@@ -375,10 +515,12 @@ export default function App() {
           currentProject={currentMemberProject}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
+          isRightWorkspaceOpen={isRightWorkspaceOpen}
+          onToggleRightWorkspace={() => setIsRightWorkspaceOpen(prev => !prev)}
           activeSessionTitle={
             (activeSpaceId === 'none'
               ? standaloneSessions.find(s => s.id === activeSessionId)?.title
-              : currentActiveSpace?.sessions?.find(s => s.id === activeSessionId)?.title) || '新对话咨询会话'
+              : currentActiveSpace?.sessions?.find(s => s.id === activeSessionId)?.title) || '规划场景深度演进路径'
           }
         />
 
@@ -403,6 +545,10 @@ export default function App() {
               onCreateSession={handleCreateSession}
               onSyncWorkspace={handleSyncWorkspace}
               onUpdateSessionTitle={handleUpdateSessionTitle}
+              isRightWorkspaceOpen={isRightWorkspaceOpen}
+              onToggleRightWorkspace={() => setIsRightWorkspaceOpen(prev => !prev)}
+              onSetRightWorkspaceOpen={(open) => setIsRightWorkspaceOpen(open)}
+              onOpenFileInRightWorkspace={handleOpenFileInRightWorkspace}
             />
           )}
 
@@ -520,6 +666,67 @@ export default function App() {
           </footer>
         )}
       </div>
+
+      {/* ------------------------------------------------------------- */}
+      {/* 中间对话主体与右侧独立区域交界分割线：支持鼠标左右拖动改变窗口大小 */}
+      {/* 1. 外层宽度恒定为 4px (w-1)，绝不改变尺寸，彻底杜绝两侧内容抖动重排 */}
+      {/* 2. Pointer Capture 像素级跟随鼠标拖拽，极速流畅，双击恢复 6:4 比例 */}
+      {/* 3. 当右侧处于全屏最大化展开状态时，不显示分割线                  */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'coach' && isRightWorkspaceOpen && !isWorkspaceExpandedFull && (
+        <div
+          onPointerDown={handlePointerDownResize}
+          onPointerMove={handlePointerMoveResize}
+          onPointerUp={handlePointerUpResize}
+          onDoubleClick={handleResetWorkspaceRatio}
+          className={`relative w-1 shrink-0 bg-slate-200 hover:bg-sky-500 active:bg-sky-600 cursor-col-resize select-none transition-colors z-30 flex items-center justify-center group ${
+            isDraggingWorkspace ? 'bg-sky-500 shadow-xs' : ''
+          }`}
+          title="按住鼠标左右拖动调整窗口宽度（双击恢复 6:4 默认比例）"
+        >
+          {/* 绝对定位扩展热区：左右各外扩 4px (总宽 12px)，方便抓取，绝不占 flex 空间 */}
+          <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize pointer-events-auto" />
+
+          {/* 居中固定尺寸的抓取小手柄 */}
+          <div className="flex flex-col space-y-1 items-center justify-center py-2 px-0.5 rounded-full bg-slate-300 group-hover:bg-white transition-colors pointer-events-none shadow-2xs">
+            <div className="w-0.5 h-0.5 rounded-full bg-slate-600 group-hover:bg-sky-600" />
+            <div className="w-0.5 h-0.5 rounded-full bg-slate-600 group-hover:bg-sky-600" />
+            <div className="w-0.5 h-0.5 rounded-full bg-slate-600 group-hover:bg-sky-600" />
+          </div>
+
+          {/* 拖动时的实时比例提示气泡 */}
+          {isDraggingWorkspace && (
+            <div className="absolute top-16 -left-14 bg-slate-900/90 text-white text-[10px] font-mono px-2 py-1 rounded shadow-lg pointer-events-none whitespace-nowrap z-50 animate-in fade-in duration-75">
+              对话 {Math.round(100 - (rightWorkspaceWidthPx / Math.max(window.innerWidth - (isSidebarCollapsed ? 64 : 240), 1)) * 100)}% : 独立区 {Math.round((rightWorkspaceWidthPx / Math.max(window.innerWidth - (isSidebarCollapsed ? 64 : 240), 1)) * 100)}%
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* 整个页面的最右边：独立区域 (RightWorkspacePanel)              */}
+      {/* 展开后，左侧的顶栏与对话主体整体向左自适应压缩收缩             */}
+      {/* 全屏展开时，覆盖左侧边栏、顶部状态栏和对话主体，铺满整个网页  */}
+      {/* ------------------------------------------------------------- */}
+      {activeTab === 'coach' && isRightWorkspaceOpen && (
+        <RightWorkspacePanel
+          isOpen={isRightWorkspaceOpen}
+          isExpandedFull={isWorkspaceExpandedFull}
+          onToggleExpandedFull={() => setIsWorkspaceExpandedFull(prev => !prev)}
+          widthPx={rightWorkspaceWidthPx}
+          isDragging={isDraggingWorkspace}
+          onClose={() => {
+            setIsWorkspaceExpandedFull(false);
+            setIsRightWorkspaceOpen(false);
+          }}
+          activeFileId={activeWorkspaceFileId}
+          onSelectFile={(id) => setActiveWorkspaceFileId(id)}
+          openTabs={openWorkspaceTabs}
+          onCloseTab={handleCloseWorkspaceTab}
+          onAddTab={handleAddWorkspaceTab}
+          projectName={currentActiveSpace?.name || '安里AI / 智耘农业'}
+        />
+      )}
 
       {/* Project Detail Deep-Dive Drawer */}
       <ProjectDetailDrawer

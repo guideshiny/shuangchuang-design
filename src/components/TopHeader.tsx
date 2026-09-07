@@ -3,7 +3,8 @@ import {
   Bell, 
   AlertTriangle, 
   ChevronRight, 
-  PanelLeft
+  PanelLeft,
+  PanelRight
 } from 'lucide-react';
 import { NotificationAlert, UserSession, ProjectItem } from '../types';
 import { TabType } from './Sidebar';
@@ -19,6 +20,8 @@ interface TopHeaderProps {
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
   activeSessionTitle?: string;
+  isRightWorkspaceOpen?: boolean;
+  onToggleRightWorkspace?: () => void;
 }
 
 export default function TopHeader({
@@ -31,7 +34,9 @@ export default function TopHeader({
   currentProject,
   isSidebarCollapsed = false,
   onToggleSidebar,
-  activeSessionTitle
+  activeSessionTitle,
+  isRightWorkspaceOpen = false,
+  onToggleRightWorkspace
 }: TopHeaderProps) {
   const [showAlertMenu, setShowAlertMenu] = useState(false);
   const urgentAlertCount = alerts.filter(a => a.type === 'urgent' || a.type === 'warning').length;
@@ -100,8 +105,26 @@ export default function TopHeader({
         )}
       </div>
 
-      {/* Right Controls: Alerts */}
+      {/* Right Controls: Alerts and Right Workspace Toggle */}
       <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
+        {/* Right Workspace Toggle Button (Mirrors Left Sidebar Toggle) */}
+        {onToggleRightWorkspace && (
+          <button
+            type="button"
+            id="btn-toggle-right-workspace"
+            onClick={onToggleRightWorkspace}
+            title={isRightWorkspaceOpen ? "收起右侧独立文件与产物区" : "展开右侧独立文件与产物区"}
+            aria-label={isRightWorkspaceOpen ? "收起右侧独立文件与产物区" : "展开右侧独立文件与产物区"}
+            className={`h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200 shrink-0 cursor-pointer ${
+              isRightWorkspaceOpen 
+                ? 'bg-sky-50 border-sky-300 text-sky-700 hover:bg-sky-100 hover:border-sky-400 shadow-2xs' 
+                : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300'
+            }`}
+          >
+            <PanelRight className="h-4.5 w-4.5 transition-transform" />
+          </button>
+        )}
+
         {/* Alert Bell Trigger */}
         <div className="relative">
           <button

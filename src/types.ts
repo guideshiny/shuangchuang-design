@@ -405,6 +405,8 @@ export interface ChatMessage {
     inputPayload?: any;
     outputResponse?: any;
   };
+  generatedFiles?: AssociatedFileItem[];
+  changesCount?: number;
 }
 
 export interface DataFlowLog {
@@ -500,11 +502,12 @@ export interface RecommendedTaskDef {
 export interface AssociatedFileItem {
   id: string;
   name: string;
-  type: 'bp' | 'ppt' | 'vcr' | 'attachment';
+  type: 'bp' | 'ppt' | 'vcr' | 'attachment' | 'excel' | 'doc';
   typeLabel: string;
   size: string;
   updateTime: string;
   status?: 'ready' | 'processing';
   metaInfo?: string;
+  contentData?: any;
 }
 
