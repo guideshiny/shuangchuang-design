@@ -125,7 +125,7 @@ export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <span className="font-bold text-sm sm:text-base text-slate-900 tracking-tight">高校双创管理中枢</span>
+              <span className="font-bold text-sm sm:text-base text-slate-900 tracking-tight">赛事打磨平台</span>
               <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded-full font-medium">
                 2026大赛官方培育决策平台
               </span>

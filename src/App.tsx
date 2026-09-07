@@ -9,7 +9,9 @@ import MilestoneKanban from './components/MilestoneKanban';
 import UserManagement from './components/UserManagement';
 import TeamManagement from './components/TeamManagement';
 import KnowledgeBaseManagement from './components/KnowledgeBaseManagement';
+import PlatformKnowledgeBaseManagement from './components/PlatformKnowledgeBaseManagement';
 import MentorPoolManagement from './components/MentorPoolManagement';
+import PlatformMentorPoolManagement from './components/PlatformMentorPoolManagement';
 import ProjectDetailDrawer from './components/ProjectDetailDrawer';
 import RulesConfigModal from './components/RulesConfigModal';
 import BatchImportModal from './components/BatchImportModal';
@@ -51,6 +53,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<TabType>(() => {
     if (session?.role === 'team_member') return 'coach';
     if (session?.role === 'mentor') return 'supervision';
+    if (session?.role === 'system_admin') return 'mentors_pool';
     return 'cockpit';
   });
   
@@ -139,6 +142,8 @@ export default function App() {
       setSelectedProject(myProj);
     } else if (newSession.role === 'mentor') {
       setActiveTab('supervision');
+    } else if (newSession.role === 'system_admin') {
+      setActiveTab('mentors_pool');
     } else {
       setActiveTab('cockpit');
     }
@@ -496,15 +501,23 @@ export default function App() {
           )}
 
           {activeTab === 'mentors_pool' && (
-            <MentorPoolManagement
-              mentors={mentors}
-              onUpdateMentors={setMentors}
-              onNavigateTab={(tab) => setActiveTab(tab)}
-            />
+            session?.role === 'system_admin' ? (
+              <PlatformMentorPoolManagement />
+            ) : (
+              <MentorPoolManagement
+                mentors={mentors}
+                onUpdateMentors={setMentors}
+                onNavigateTab={(tab) => setActiveTab(tab)}
+              />
+            )
           )}
 
           {activeTab === 'knowledge_base' && (
-            <KnowledgeBaseManagement />
+            session?.role === 'system_admin' ? (
+              <PlatformKnowledgeBaseManagement />
+            ) : (
+              <KnowledgeBaseManagement />
+            )
           )}
 
           {activeTab === 'users_management' && (

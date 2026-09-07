@@ -50,14 +50,18 @@ export default function TopHeader({
     coach: { title: 'AI备赛教练与统一入口', subtitle: '多模式智能体对话 · 空间文档互通 · 深度工具链调度' },
     guidance_workbench: { title: '全链路指导工作台', subtitle: 'L1~L6全阶段智能演进 · 商业计划书12章沉浸打磨 · 多模态材料档案与版本快照' },
     defense_training: { title: '模拟评审与答辩训练', subtitle: '全真模拟答辩 · 评委风格质询 · 六维能力雷达与复盘报告' },
-    my_project: { title: '我的参赛项目工作台', subtitle: 'AI对标得分 · 专家问诊诊断 · 整改工单交付' },
+    my_project: { title: '项目工作台', subtitle: 'AI对标得分 · 专家问诊诊断 · 整改工单交付' },
     cockpit: { title: '备赛数据驾驶舱', subtitle: '全校项目总览 · 梯队分布 · AI战略决策' },
     screening: { title: '智能对标初筛与排名', subtitle: '2026教育部官方主赛道二级细分指标对标' },
     mentorship: { title: '常态化辅导与调度', subtitle: '专家智库 · 弱项针对性匹配 · 批量集训营' },
     supervision: { title: '辅导资产沉淀与督导', subtitle: '辅导工单闭环 · 二次复核 · 修改成效验证' },
     milestones: { title: '重点项目全流程看板', subtitle: '五阶备赛管线 · 动态跟踪 · 冲刺保障' },
-    mentors_pool: { title: '全校及外部双创导师智库', subtitle: '校内博导 · 国奖评委 · 产业高管 · 创投合伙人 · 履历档案与即时联络' },
-    knowledge_base: { title: '学校双创知识库管理', subtitle: '校内专属智库 · 2026大赛规程 · 标杆案例库 · RAG调用' },
+    mentors_pool: session?.role === 'system_admin'
+      ? { title: '平台导师智库管理', subtitle: '中央总控 · 全国权威国评库 · 顶尖创投合伙人 · 500强产业首席专家 · 跨校派驻调度' }
+      : { title: '全校及外部双创导师智库', subtitle: '校内博导 · 国奖评委 · 产业高管 · 创投合伙人 · 履历档案与即时联络' },
+    knowledge_base: session?.role === 'system_admin'
+      ? { title: '平台赛事知识库管理', subtitle: '中央总控 · 全平台通用权威规程 · 国赛金奖全案库 · 统一RAG标准源' }
+      : { title: '学校双创知识库管理', subtitle: '校内专属智库 · 2026大赛规程 · 标杆案例库 · RAG调用' },
     users_management: { title: '用户与权限管理', subtitle: '校级管理 · 学院秘书 · 评审导师 · 学生团队' },
     teams_management: { title: '项目团队架构管理', subtitle: '跨学科配比 · 商业专人 · 知识产权合规' },
   };

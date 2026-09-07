@@ -187,17 +187,9 @@ export default function Sidebar({
           groupName: 'AI伴学与答辩实训',
           items: [
             { id: 'coach' as TabType, label: 'AI备赛教练 (统一入口)', icon: Bot, badge: 'Hero', highlight: false },
+            { id: 'my_project' as TabType, label: '项目工作台', icon: Target, badge: 'AI对标' },
             { id: 'guidance_workbench' as TabType, label: '全链路指导工作台', icon: Workflow, badge: 'L1~L6', highlight: true },
             { id: 'defense_training' as TabType, label: '模拟评审与答辩训练', icon: Swords, badge: '实训', highlight: false },
-          ]
-        },
-        {
-          groupName: '项目执行与推进管线',
-          items: [
-            { id: 'my_project' as TabType, label: '我的参赛项目工作台', icon: Target, badge: 'AI对标' },
-            { id: 'supervision' as TabType, label: '导师整改与工单复核', icon: CheckSquare, badge: '闭环' },
-            { id: 'milestones' as TabType, label: '项目备赛阶段管线', icon: Kanban, badge: '5阶' },
-            { id: 'teams_management' as TabType, label: '团队架构与分工审查', icon: UsersRound, badge: '合规' },
           ]
         },
       ];
@@ -211,24 +203,22 @@ export default function Sidebar({
             { id: 'supervision' as TabType, label: '项目辅导与督导工单', icon: CheckSquare, badge: '问诊督导' },
           ]
         },
+      ];
+    }
+
+    if (session.role === 'system_admin') {
+      return [
         {
-          groupName: '项目遴选与调度',
+          groupName: '全平台资源与权限总控',
           items: [
-            { id: 'mentorship' as TabType, label: '辅导调度与排期日历', icon: Users, badge: '排期' },
-            { id: 'screening' as TabType, label: '对标初筛评审工作台', icon: Layers, badge: '2026细则' },
-          ]
-        },
-        {
-          groupName: '导师专家资源库',
-          items: [
-            { id: 'mentors_pool' as TabType, label: '我的导师智库履历', icon: Award, badge: '专家库' },
-            { id: 'knowledge_base' as TabType, label: '2026大赛官方评审规程', icon: Database, badge: '细则' },
+            { id: 'mentors_pool' as TabType, label: '平台导师智库管理', icon: Award, badge: '国家级' },
+            { id: 'knowledge_base' as TabType, label: '平台赛事知识库管理', icon: Database, badge: '全国库' },
           ]
         },
       ];
     }
 
-    // school_admin and system_admin get full access
+    // school_admin gets full access
     return [
       {
         groupName: '决策中枢驾驶舱',
@@ -252,7 +242,7 @@ export default function Sidebar({
         ]
       },
       {
-        groupName: session.role === 'system_admin' ? '全平台资源与权限总控' : '校本智库与组织管理',
+        groupName: '校本智库与组织管理',
         items: [
           { id: 'mentors_pool' as TabType, label: '双创导师智库管理', icon: Award, badge: '专家库' },
           { id: 'knowledge_base' as TabType, label: session.university ? `${session.university}双创智库` : '学校知识库管理', icon: Database, badge: '校内智库' },
@@ -283,7 +273,7 @@ export default function Sidebar({
         <div className="overflow-hidden min-w-0">
           <div className="flex items-center space-x-1.5">
             <span className="font-bold text-xs xl:text-sm tracking-tight text-slate-900 truncate">
-              {session.university ? `${session.university}双创中枢` : '高校双创管理中枢'}
+              赛事打磨平台
             </span>
             <span className="text-[10px] bg-sky-50 text-sky-700 border border-sky-200 px-1 py-0.2 rounded font-medium shrink-0">
               2026
@@ -505,8 +495,8 @@ export default function Sidebar({
           </div>
         ))}
 
-        {/* 会话历史列表 (项目组成员 & 学校管理端均可见) */}
-        {(session.role === 'team_member' || session.role === 'school_admin' || session.role === 'system_admin') && (
+        {/* 会话历史列表 (项目组成员 & 学校管理端可见，Admin端与导师端不展示) */}
+        {(session.role === 'team_member' || session.role === 'school_admin') && (
           <div className="pt-3 border-t border-slate-200/80 space-y-1">
             <div className="flex items-center justify-between px-1.5 py-1">
               <button
@@ -714,53 +704,55 @@ export default function Sidebar({
             </div>
         )}
 
-        {/* 常用捷径与工具 */}
-        <div>
-          <div className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-            备赛捷径与工具
-          </div>
-          <div className="space-y-1">
-            <button
-              id="sidebar-btn-rules"
-              onClick={onOpenRulesConfig}
-              className="w-full flex items-center justify-between px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition text-left"
-            >
-              <div className="flex items-center space-x-2.5">
-                <BookOpen className="h-4 w-4 text-sky-600 shrink-0" />
-                <span>2026官方评审细则</span>
-              </div>
-              <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-            </button>
+        {/* 常用捷径与工具 (导师端与Admin端不展示) */}
+        {session.role !== 'mentor' && session.role !== 'system_admin' && (
+          <div>
+            <div className="px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              备赛捷径与工具
+            </div>
+            <div className="space-y-1">
+              <button
+                id="sidebar-btn-rules"
+                onClick={onOpenRulesConfig}
+                className="w-full flex items-center justify-between px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition text-left"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <BookOpen className="h-4 w-4 text-sky-600 shrink-0" />
+                  <span>2026官方评审细则</span>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+              </button>
 
-            {(session.role === 'school_admin' || session.role === 'system_admin') && (
-              <>
-                <button
-                  id="sidebar-btn-import"
-                  onClick={onOpenBatchImport}
-                  className="w-full flex items-center justify-between px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition text-left"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <UploadCloud className="h-4 w-4 text-indigo-600 shrink-0" />
-                    <span>海量项目智能导入</span>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-                </button>
+              {session.role === 'school_admin' && (
+                <>
+                  <button
+                    id="sidebar-btn-import"
+                    onClick={onOpenBatchImport}
+                    className="w-full flex items-center justify-between px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition text-left"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <UploadCloud className="h-4 w-4 text-indigo-600 shrink-0" />
+                      <span>海量项目智能导入</span>
+                    </div>
+                    <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+                  </button>
 
-                <button
-                  id="sidebar-btn-report"
-                  onClick={onOpenReportExport}
-                  className="w-full flex items-center justify-between px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition text-left"
-                >
-                  <div className="flex items-center space-x-2.5">
-                    <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>阶段复盘汇报生成</span>
-                  </div>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
-                </button>
-              </>
-            )}
+                  <button
+                    id="sidebar-btn-report"
+                    onClick={onOpenReportExport}
+                    className="w-full flex items-center justify-between px-3 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition text-left"
+                  >
+                    <div className="flex items-center space-x-2.5">
+                      <FileText className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <span>阶段复盘汇报生成</span>
+                    </div>
+                    <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Fixed Personal Account at Bottom (展示当前登录端与高校) */}
