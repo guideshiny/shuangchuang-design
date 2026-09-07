@@ -3,18 +3,6 @@ import {
   Bell, 
   AlertTriangle, 
   ChevronRight, 
-  BookOpen, 
-  Sparkles, 
-  Clock,
-  CheckCircle2,
-  Building,
-  GraduationCap,
-  School,
-  Award,
-  ShieldCheck,
-  Repeat,
-  LogOut,
-  Folder,
   PanelLeft
 } from 'lucide-react';
 import { NotificationAlert, UserSession, ProjectItem } from '../types';
@@ -30,6 +18,7 @@ interface TopHeaderProps {
   currentProject?: ProjectItem;
   isSidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
+  activeSessionTitle?: string;
 }
 
 export default function TopHeader({
@@ -41,13 +30,14 @@ export default function TopHeader({
   onSelectProjectFromAlert,
   currentProject,
   isSidebarCollapsed = false,
-  onToggleSidebar
+  onToggleSidebar,
+  activeSessionTitle
 }: TopHeaderProps) {
   const [showAlertMenu, setShowAlertMenu] = useState(false);
   const urgentAlertCount = alerts.filter(a => a.type === 'urgent' || a.type === 'warning').length;
 
   const tabTitleMap: Record<TabType, { title: string; subtitle: string }> = {
-    coach: { title: 'AI备赛教练与统一入口', subtitle: '多模式智能体对话 · 空间文档互通 · 深度工具链调度' },
+    coach: { title: 'AI备赛助手', subtitle: '多模式智能体对话 · 空间文档互通 · 深度工具链调度' },
     guidance_workbench: { title: '全链路指导工作台', subtitle: 'L1~L6全阶段智能演进 · 商业计划书12章沉浸打磨 · 多模态材料档案与版本快照' },
     defense_training: { title: '模拟评审与答辩训练', subtitle: '全真模拟答辩 · 评委风格质询 · 六维能力雷达与复盘报告' },
     my_project: { title: '项目工作台', subtitle: 'AI对标得分 · 专家问诊诊断 · 整改工单交付' },
@@ -92,73 +82,26 @@ export default function TopHeader({
           </button>
         )}
 
-        <div className="flex items-baseline space-x-2 truncate">
-          <span className="text-sm font-bold text-slate-900 tracking-tight">{currentTabInfo.title}</span>
-          <span className="text-xs text-slate-400 hidden md:inline truncate">/ {currentTabInfo.subtitle}</span>
-        </div>
-
-        <div className="hidden lg:flex items-center space-x-1 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-0.5 rounded-full font-medium shrink-0">
-          <Clock className="h-3 w-3 text-amber-600 mr-1" />
-          <span>距离国赛网评：48 天 · 重点攻坚期</span>
-        </div>
+        {activeTab === 'coach' ? (
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="font-semibold text-sm text-slate-800 truncate" title={activeSessionTitle || '新对话咨询会话'}>
+              {activeSessionTitle || '新对话咨询会话'}
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono shrink-0">
+              2026大赛知识库在线
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-baseline space-x-2 truncate">
+            <span className="text-sm font-bold text-slate-900 tracking-tight">{currentTabInfo.title}</span>
+            <span className="text-xs text-slate-400 hidden md:inline truncate">/ {currentTabInfo.subtitle}</span>
+          </div>
+        )}
       </div>
 
-      {/* Right Controls: Portal Info, University Badge, Switch Button, Quick Rules, Alerts */}
+      {/* Right Controls: Alerts */}
       <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
-        {/* University Badge (for team_member and school_admin) */}
-        {session.university && (
-          <div className="hidden sm:flex items-center space-x-1 text-xs text-sky-800 bg-sky-50 border border-sky-200 px-2.5 py-1 rounded-lg font-semibold">
-            <Building className="h-3.5 w-3.5 text-sky-600" />
-            <span>{session.university}</span>
-          </div>
-        )}
-
-        {/* Global Active Project Badge (for team_member) */}
-        {session.role === 'team_member' && currentProject && (
-          <div 
-            className="hidden xl:flex items-center space-x-1.5 text-xs text-sky-800 bg-sky-50/80 border border-sky-200/80 px-2.5 py-1 rounded-lg font-medium max-w-[240px] truncate"
-            title={`当前全局参赛项目: ${currentProject.name}`}
-          >
-            <Folder className="h-3.5 w-3.5 text-sky-600 shrink-0" />
-            <span className="truncate font-semibold">{currentProject.name}</span>
-          </div>
-        )}
-
-        {/* Role Portal Badge */}
-        <div className={`flex items-center space-x-1 text-xs px-2.5 py-1 rounded-lg font-medium border ${
-          session.role === 'team_member' ? 'bg-sky-50 text-sky-700 border-sky-200' :
-          session.role === 'school_admin' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-          session.role === 'mentor' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-          'bg-purple-50 text-purple-700 border-purple-200'
-        }`}>
-          {session.role === 'team_member' && <GraduationCap className="h-3.5 w-3.5 text-sky-600" />}
-          {session.role === 'school_admin' && <School className="h-3.5 w-3.5 text-blue-600" />}
-          {session.role === 'mentor' && <Award className="h-3.5 w-3.5 text-amber-600" />}
-          {session.role === 'system_admin' && <ShieldCheck className="h-3.5 w-3.5 text-purple-600" />}
-          <span>{session.roleLabel}</span>
-        </div>
-
-        {/* Switch Portal / Logout Button */}
-        <button
-          onClick={onLogout}
-          title="切换登录端或切换账号"
-          className="flex items-center space-x-1 px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition font-medium"
-        >
-          <Repeat className="h-3.5 w-3.5 text-slate-500" />
-          <span className="hidden sm:inline">切换端</span>
-        </button>
-
-        {/* Quick Rule Button */}
-        <button
-          onClick={onOpenRulesConfig}
-          className="hidden md:inline-flex items-center px-2.5 py-1 text-xs text-slate-600 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition font-medium"
-        >
-          <BookOpen className="h-3.5 w-3.5 mr-1.5 text-sky-600" />
-          2026规则
-        </button>
-
-        <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-
         {/* Alert Bell Trigger */}
         <div className="relative">
           <button

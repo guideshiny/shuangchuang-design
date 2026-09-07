@@ -26,7 +26,7 @@ import { SceneGuidanceWorkbench } from './components/SceneGuidanceWorkbench';
 
 import { mockProjects } from './data/mockProjects';
 import { mockMentors, mockWorkOrders, mockCohortTasks, mockAlerts } from './data/mockMentors';
-import { initialProjectSpaces } from './data/mockSpaceData';
+import { initialProjectSpaces, initialMergedSessions } from './data/mockSpaceData';
 import { 
   ProjectItem, 
   SupervisionWorkOrder, 
@@ -64,40 +64,11 @@ export default function App() {
   const [cohortTasks, setCohortTasks] = useState<CohortBatchTask[]>(mockCohortTasks);
   const [alerts] = useState(mockAlerts);
 
-  // Data State - Shuangchuang-AI Spaces & Sessions
+  // Data State - Shuangchuang-AI Unified Sessions
   const [spaces, setSpaces] = useState<ProjectSpace[]>(initialProjectSpaces);
-  const [standaloneSessions, setStandaloneSessions] = useState<CoachSession[]>([
-    {
-      id: 'sess-init-1',
-      title: '关于2026大赛评审规则重点解读与备赛战略答疑',
-      time: '14:20',
-      messages: [
-        {
-          id: 'msg-1',
-          sender: 'coach',
-          type: 'text',
-          text: '你好！我是你的2026中国国际大学生创新大赛AI备赛教练。你可以随时向我提问关于大赛规则、商业计划书润色、PPT逻辑打磨或模拟答辩准备的问题。',
-          timestamp: '14:20'
-        }
-      ]
-    },
-    {
-      id: 'sess-init-2',
-      title: '商业计划书执行摘要逻辑优化与价值主张提炼',
-      time: '昨天',
-      messages: [
-        {
-          id: 'msg-2',
-          sender: 'coach',
-          type: 'text',
-          text: '在撰写执行摘要时，重点是要用三句话讲清楚：痛点真实性、技术壁垒不可替代性，以及商业化落地验证的扎实数据。',
-          timestamp: '昨天'
-        }
-      ]
-    }
-  ]);
+  const [standaloneSessions, setStandaloneSessions] = useState<CoachSession[]>(initialMergedSessions);
   const [activeSpaceId, setActiveSpaceId] = useState<string>('none');
-  const [activeSessionId, setActiveSessionId] = useState<string>('sess-init-1');
+  const [activeSessionId, setActiveSessionId] = useState<string>(initialMergedSessions[0]?.id || 'sess-init-1');
 
   // Modals & Drawers State
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
@@ -364,15 +335,19 @@ export default function App() {
         onOpenBatchImport={() => setIsImportModalOpen(true)}
         onOpenReportExport={() => setIsReportModalOpen(true)}
         onOpenRulesConfig={() => setIsRulesModalOpen(true)}
-        spaces={spaces}
+        sessions={standaloneSessions}
         standaloneSessions={standaloneSessions}
         activeSpaceId={activeSpaceId}
         activeSessionId={activeSessionId}
         onSelectSpace={handleSelectSpace}
-        onSelectSession={handleSelectSession}
+        onSelectSession={(sessionId, _legacyId) => {
+          handleSelectSession('none', sessionId);
+        }}
         onCreateSpace={handleCreateSpace}
-        onCreateSession={handleCreateSession}
-        onDeleteSession={handleDeleteSession}
+        onCreateSession={() => handleCreateSession('none')}
+        onDeleteSession={(sessionId, _legacyId) => {
+          handleDeleteSession('none', sessionId);
+        }}
         projects={projects}
         selectedProjectId={currentMemberProject?.id}
         onSelectProjectItem={(projId) => {
@@ -400,6 +375,11 @@ export default function App() {
           currentProject={currentMemberProject}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={() => setIsSidebarCollapsed(prev => !prev)}
+          activeSessionTitle={
+            (activeSpaceId === 'none'
+              ? standaloneSessions.find(s => s.id === activeSessionId)?.title
+              : currentActiveSpace?.sessions?.find(s => s.id === activeSessionId)?.title) || '新对话咨询会话'
+          }
         />
 
         {/* Main Content Area */}

@@ -437,6 +437,7 @@ export interface CoachSession {
   messages?: ChatMessage[];
   taskKey?: string; // 7类任务标识
   taskTag?: string; // 任务分类标签
+  taskType?: string; // 任务类型：'chat' | 'bp' | 'defense' | 'ppt' | 'policy' | 'market' | 'benchmark' | 'knowledge' | 'writing' | 'image' | 'sheet' | 'video'
 }
 
 export interface ProjectSpace {

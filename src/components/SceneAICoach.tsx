@@ -1878,70 +1878,6 @@ export default function SceneAICoach({
       {/* MAIN FULL-WIDTH CHAT WORKSPACE                                */}
       {/* ------------------------------------------------------------- */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#FBFBFC] relative h-full">
-        {/* Top Context Ribbon: Active Space, Active Session & Workspace Sync */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2.5 flex items-center justify-between shadow-2xs flex-shrink-0 z-10">
-          <div className="flex items-center space-x-3 min-w-0">
-            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-            <div className="min-w-0">
-              <div className="flex items-center space-x-2">
-                <span className="font-bold text-xs text-gray-900 truncate">
-                  {activeSpace && activeSpaceId !== 'none' ? `${activeSpace.icon || '📁'} 空间: ${activeSpace.name} (${activeSpace.school || selectedUniversity.name} · ${activeSpace.leader || '负责人'})` : '📁 无工作空间'}
-                </span>
-                {activeSpace && activeSpaceId !== 'none' && (
-                  <>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-mono font-medium">
-                      {activeSpace.trackTag}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-mono">
-                      {mockStages.find(s => s.id === (activeSpace?.stage || currentStage))?.name || `${activeSpace?.stage || 'L3'} 阶段`}
-                    </span>
-                  </>
-                )}
-                {/* Active Expert Agent indicator badge */}
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-mono font-medium hidden sm:inline-flex items-center space-x-1">
-                  <span>{selectedAgentId === 'diagnosis' ? '🎯 诊断与指导专家' : '🎙️ 答辩专家'}</span>
-                </span>
-              </div>
-              <div className="flex items-center space-x-2 text-[10px] text-gray-500 font-mono mt-0.5">
-                <span className="text-gray-800 font-semibold truncate max-w-[220px]" title={currentSession?.title}>
-                  会话: {currentSession?.title || '新备赛咨询会话'}
-                </span>
-                {activeSpace && activeSpaceId !== 'none' && (
-                  <>
-                    <span>•</span>
-                    <span className="flex items-center space-x-1 text-gray-600 truncate" title={activeSpace.workspace.localPath}>
-                      <Folder className="h-3 w-3 text-amber-500 flex-shrink-0" />
-                      <span className="truncate max-w-[180px]">{activeSpace.workspace.localPath}</span>
-                    </span>
-                    <span>•</span>
-                    <span className="flex items-center space-x-1 text-emerald-700 font-medium flex-shrink-0">
-                      <Cloud className="h-3 w-3 text-sky-500 flex-shrink-0" />
-                      <span>{activeSpace.workspace.syncRate || '100% 云端同步'}</span>
-                    </span>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            {activeSpace && activeSpaceId !== 'none' && (
-              <button
-                onClick={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
-                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors border ${
-                  isWorkspaceOpen
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                    : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 shadow-2xs'
-                }`}
-              >
-                <Layers className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{isWorkspaceOpen ? '收起工作空间资产' : '已共享工作空间资产'}</span>
-                <span className="sm:hidden">资产</span>
-              </button>
-            )}
-          </div>
-        </div>
-
         {/* Main Workspace Area: Fixed Layout with Upper Scrollable Viewport and Bottom-Docked Input Bar */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
           {/* Scrollable Message / Greeting Area */}
@@ -1957,18 +1893,14 @@ export default function SceneAICoach({
                   开启新的备赛辅导会话
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500 max-w-lg mt-1.5 leading-relaxed">
-                  选择专家智能体、绑定工作空间与技能，在下方输入框提问或点击推荐任务发起冲刺咨询
+                  向 AI 备赛助手提问，或点击下方推荐任务与快捷功能发起冲刺咨询
                 </p>
 
                 {/* Quick Badges Row */}
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-4 mb-2 text-xs font-mono">
                   <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                    <span className="text-amber-500">📁</span>
-                    <span>空间: {activeSpace && activeSpaceId !== 'none' ? activeSpace.name : '无工作空间'}</span>
-                  </div>
-                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
                     <span className="text-blue-500">🤖</span>
-                    <span>专家: {selectedAgentId === 'diagnosis' ? '诊断与指导专家' : '答辩专家'}</span>
+                    <span>智能体: {selectedAgentId === 'diagnosis' ? '诊断与指导专家' : '答辩专家'}</span>
                   </div>
                   <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
                     <span className="text-indigo-500">⚡</span>
@@ -2756,7 +2688,7 @@ export default function SceneAICoach({
           </div>
 
           {/* Bottom Docked ChatComposer: Permanently fixed to the bottom */}
-          <div className="sticky bottom-0 z-30 px-4 sm:px-6 py-3 sm:py-4 bg-[#FBFBFC]/95 backdrop-blur-xs border-t border-gray-200/90 flex-shrink-0 flex justify-center shadow-lg">
+          <div className="sticky bottom-0 px-4 sm:px-6 py-3 sm:py-4 bg-[#FBFBFC] flex-shrink-0 flex justify-center border-0 border-none z-0">
             <div className="w-full max-w-4xl">
               {autoPromptHint && (
                 <div className="mb-2.5 flex items-center justify-between px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 text-blue-950 text-xs shadow-2xs">
@@ -2796,10 +2728,6 @@ export default function SceneAICoach({
                 onAddMentionFile={handleAddMentionFile}
                 onRemoveMentionFile={handleRemoveMentionFile}
               />
-              <div className="flex items-center justify-between text-[10px] text-gray-400 px-1 mt-2">
-                <span>AI 生成内容仅供参赛参考，具体申报请以组委会正式通知为准</span>
-                <span className="font-mono">厦门大学双创智能体 · 2026</span>
-              </div>
             </div>
           </div>
         </div>

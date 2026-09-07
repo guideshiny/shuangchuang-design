@@ -25,16 +25,22 @@ import {
   Bot,
   Cpu,
   MessageSquare,
+  MessageSquarePlus,
   Folder,
   FolderKanban,
   Plus,
+  PlusCircle,
   Trash2,
   X,
   Swords,
   Workflow,
   Search,
   Check,
-  CheckCircle2
+  CheckCircle2,
+  Presentation,
+  PenTool,
+  Image,
+  Video
 } from 'lucide-react';
 import { UserSession, ProjectSpace, CoachSession, ProjectItem } from '../types';
 import { cleanSessionTitle } from '../utils/titleUtils';
@@ -62,16 +68,16 @@ interface SidebarProps {
   onOpenBatchImport: () => void;
   onOpenReportExport: () => void;
   onOpenRulesConfig: () => void;
-  // Team Member Sessions & Spaces
-  spaces?: ProjectSpace[];
+  // Sessions
+  sessions?: CoachSession[];
   standaloneSessions?: CoachSession[];
   activeSpaceId?: string;
   activeSessionId?: string;
   onSelectSpace?: (spaceId: string) => void;
-  onSelectSession?: (spaceId: string, sessionId: string) => void;
+  onSelectSession?: (sessionId: string, legacySessionId?: string) => void;
   onCreateSpace?: (newSpace: { name: string; trackTag: string; school: string; leader: string }) => void;
-  onCreateSession?: (spaceId: string) => void;
-  onDeleteSession?: (spaceId: string, sessionId: string) => void;
+  onCreateSession?: (legacySpaceId?: string) => void;
+  onDeleteSession?: (sessionId: string, legacySessionId?: string) => void;
   // Global Project Selection for Team Member
   projects?: ProjectItem[];
   selectedProjectId?: string;
@@ -87,13 +93,10 @@ export default function Sidebar({
   onOpenBatchImport,
   onOpenReportExport,
   onOpenRulesConfig,
-  spaces = [],
+  sessions,
   standaloneSessions = [],
-  activeSpaceId = 'none',
   activeSessionId = '',
-  onSelectSpace,
   onSelectSession,
-  onCreateSpace,
   onCreateSession,
   onDeleteSession,
   projects = [],
@@ -102,10 +105,49 @@ export default function Sidebar({
   isCollapsed = false,
 }: SidebarProps) {
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-  const [showCreateSpaceModal, setShowCreateSpaceModal] = useState(false);
   const [isSessionsExpanded, setIsSessionsExpanded] = useState(true);
-  const [isSpacesExpanded, setIsSpacesExpanded] = useState(true);
-  const [expandedSpaceIds, setExpandedSpaceIds] = useState<Set<string>>(() => new Set(spaces.map(s => s.id)));
+
+  // All unified sessions
+  const allSessions = sessions && sessions.length > 0 ? sessions : standaloneSessions;
+
+  // Task icon helper for different task types
+  const renderSessionTaskIcon = (sess: CoachSession, isActive: boolean) => {
+    const type = sess.taskType;
+    const key = sess.taskKey || '';
+    const title = sess.title || '';
+
+    if (type === 'defense' || key.includes('defense') || key.includes('grill') || title.includes('答辩') || title.includes('质询') || title.includes('考官')) {
+      return <Swords className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-purple-600' : 'text-purple-500'}`} />;
+    }
+    if (type === 'bp' || key.includes('bp') || key.includes('diag') || title.includes('商业计划书') || title.includes('BP') || title.includes('体检')) {
+      return <FileText className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-blue-500'}`} />;
+    }
+    if (type === 'ppt' || title.toLowerCase().includes('ppt') || title.includes('路演') || title.includes('幻灯片')) {
+      return <Presentation className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-amber-600' : 'text-amber-500'}`} />;
+    }
+    if (type === 'policy' || key.includes('task-1') || title.includes('政策') || title.includes('规则') || title.includes('评分标准') || title.includes('细则')) {
+      return <BookOpen className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-emerald-600' : 'text-emerald-500'}`} />;
+    }
+    if (type === 'market' || type === 'sheet' || key.includes('3-2') || title.includes('竞品') || title.includes('市场') || title.includes('调研') || title.includes('表格')) {
+      return <BarChart3 className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-sky-600' : 'text-sky-500'}`} />;
+    }
+    if (type === 'benchmark' || key.includes('3-1') || title.includes('标杆') || title.includes('金奖') || title.includes('案例')) {
+      return <Award className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-yellow-600' : 'text-yellow-500'}`} />;
+    }
+    if (type === 'knowledge' || key.includes('task-4') || title.includes('智库') || title.includes('知识库') || title.includes('算力')) {
+      return <Database className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-indigo-600' : 'text-indigo-500'}`} />;
+    }
+    if (type === 'writing' || title.includes('写作') || title.includes('文案') || title.includes('提炼') || title.includes('润色') || title.includes('速诊')) {
+      return <PenTool className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-rose-500' : 'text-rose-400'}`} />;
+    }
+    if (type === 'image' || title.includes('图像') || title.includes('图片')) {
+      return <Image className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-pink-500' : 'text-pink-400'}`} />;
+    }
+    if (type === 'video' || title.includes('视频')) {
+      return <Video className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-teal-600' : 'text-teal-500'}`} />;
+    }
+    return <MessageSquare className={`h-3.5 w-3.5 flex-shrink-0 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />;
+  };
 
   // Team Member Project Selector State
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
@@ -144,41 +186,6 @@ export default function Sidebar({
     setProjectSearchQuery('');
   };
 
-  // New Space Form State
-  const [newSpaceForm, setNewSpaceForm] = useState({
-    name: '',
-    trackTag: '高教主赛道-创意组',
-    school: session.university || '创新示范高校',
-    leader: session.name || '项目负责人',
-  });
-
-  const safeSpaces = spaces && spaces.length > 0 ? spaces : [];
-
-  const toggleSpace = (spaceId: string) => {
-    setExpandedSpaceIds(prev => {
-      const next = new Set(prev);
-      if (next.has(spaceId)) {
-        next.delete(spaceId);
-      } else {
-        next.add(spaceId);
-      }
-      return next;
-    });
-  };
-
-  const handleCreateSpaceSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newSpaceForm.name.trim()) return;
-    onCreateSpace?.(newSpaceForm);
-    setShowCreateSpaceModal(false);
-    setNewSpaceForm({
-      name: '',
-      trackTag: '高教主赛道-创意组',
-      school: session.university || '创新示范高校',
-      leader: session.name || '项目负责人',
-    });
-  };
-
   // Role-based Nav configurations
   const getNavGroups = () => {
     if (session.role === 'team_member') {
@@ -186,7 +193,7 @@ export default function Sidebar({
         {
           groupName: 'AI伴学与答辩实训',
           items: [
-            { id: 'coach' as TabType, label: 'AI备赛教练 (统一入口)', icon: Bot, badge: 'Hero', highlight: false },
+            { id: 'coach' as TabType, label: '新建对话', icon: MessageSquarePlus },
             { id: 'my_project' as TabType, label: '项目工作台', icon: Target, badge: 'AI对标' },
             { id: 'guidance_workbench' as TabType, label: '全链路指导工作台', icon: Workflow, badge: 'L1~L6', highlight: true },
             { id: 'defense_training' as TabType, label: '模拟评审与答辩训练', icon: Swords, badge: '实训', highlight: false },
@@ -227,9 +234,9 @@ export default function Sidebar({
         ]
       },
       {
-        groupName: 'AI数智备赛教练',
+        groupName: 'AI数智备赛',
         items: [
-          { id: 'coach' as TabType, label: 'AI备赛教练 (统一入口)', icon: Bot, badge: 'Hero', highlight: false },
+          { id: 'coach' as TabType, label: '新建对话', icon: MessageSquarePlus },
         ]
       },
       {
@@ -460,6 +467,28 @@ export default function Sidebar({
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                const isNewChatAction = item.id === 'coach';
+
+                if (isNewChatAction) {
+                  return (
+                    <button
+                      key={item.id}
+                      id={`sidebar-tab-${item.id}`}
+                      onClick={() => {
+                        onCreateSession?.();
+                        setActiveTab('coach');
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-left"
+                      title="点击新建对话"
+                    >
+                      <div className="flex items-center space-x-2.5 truncate">
+                        <Icon className="h-4 w-4 shrink-0 text-slate-400" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                    </button>
+                  );
+                }
+
                 return (
                   <button
                     key={item.id}
@@ -475,19 +504,21 @@ export default function Sidebar({
                       <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
                       <span className="truncate">{item.label}</span>
                     </div>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
-                      item.badge === 'Hero'
-                        ? isActive
-                          ? 'bg-sky-600 text-white font-bold'
-                          : 'bg-sky-100 text-sky-800 font-bold border border-sky-200'
-                        : item.badge === 'P0'
+                    {item.badge && (
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${
+                        item.badge === 'Hero'
                           ? isActive
-                            ? 'bg-rose-500 text-white font-bold'
-                            : 'bg-rose-50 text-rose-700 border border-rose-100'
-                          : isActive ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {item.badge}
-                    </span>
+                            ? 'bg-sky-600 text-white font-bold'
+                            : 'bg-sky-100 text-sky-800 font-bold border border-sky-200'
+                          : item.badge === 'P0'
+                            ? isActive
+                              ? 'bg-rose-500 text-white font-bold'
+                              : 'bg-rose-50 text-rose-700 border border-rose-100'
+                            : isActive ? 'bg-sky-100 text-sky-800' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {item.badge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -504,7 +535,7 @@ export default function Sidebar({
                 className="flex items-center space-x-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
                 title="折叠/展开会话历史"
               >
-                <span>会话历史 ({standaloneSessions.length})</span>
+                <span>会话历史 ({allSessions.length})</span>
                 <ChevronDown 
                   className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
                     isSessionsExpanded ? '' : '-rotate-90'
@@ -513,11 +544,11 @@ export default function Sidebar({
               </button>
               <button
                 onClick={() => {
-                  onCreateSession?.('none');
+                  onCreateSession?.();
                   setActiveTab('coach');
                 }}
                 className="p-1 rounded-md text-slate-400 hover:text-sky-600 hover:bg-slate-100 transition-colors"
-                title="新建独立会话"
+                title="新建会话"
                 id="btn-create-standalone-session"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -526,25 +557,23 @@ export default function Sidebar({
 
             {isSessionsExpanded && (
               <div className="space-y-0.5 mt-0.5">
-                {standaloneSessions.map((sess) => {
-                  const isSessionActive = activeTab === 'coach' && (activeSpaceId === 'none' || !activeSpaceId) && sess.id === activeSessionId;
+                {allSessions.map((sess) => {
+                  const isSessionActive = activeTab === 'coach' && sess.id === activeSessionId;
                   return (
                     <div
                       key={sess.id}
                       onClick={() => {
-                        onSelectSession?.('none', sess.id);
+                        onSelectSession?.(sess.id);
                         setActiveTab('coach');
                       }}
                       className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors cursor-pointer group/sess ${
                         isSessionActive
-                          ? 'bg-sky-50 text-sky-700 font-medium'
+                          ? 'bg-sky-50 text-sky-700 font-medium shadow-2xs'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
                       }`}
                     >
                       <div className="flex items-center space-x-2 min-w-0 flex-1">
-                        <MessageSquare className={`h-3.5 w-3.5 flex-shrink-0 ${
-                          isSessionActive ? 'text-sky-600' : 'text-slate-400 group-hover/sess:text-slate-600'
-                        }`} />
+                        {renderSessionTaskIcon(sess, isSessionActive)}
                         <span className="truncate pr-1 text-xs" title={cleanSessionTitle(sess.title)}>
                           {cleanSessionTitle(sess.title)}
                         </span>
@@ -559,7 +588,7 @@ export default function Sidebar({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onDeleteSession('none', sess.id);
+                              onDeleteSession(sess.id);
                             }}
                             className="opacity-0 group-hover/sess:opacity-100 p-0.5 hover:text-rose-600 rounded text-slate-400 transition-opacity"
                             title="删除会话"
@@ -571,7 +600,7 @@ export default function Sidebar({
                     </div>
                   );
                 })}
-                {standaloneSessions.length === 0 && (
+                {allSessions.length === 0 && (
                   <div className="px-2 py-2 text-[11px] text-slate-400 italic text-center">
                     暂无会话历史，点击 + 新建
                   </div>
@@ -579,129 +608,6 @@ export default function Sidebar({
               </div>
             )}
           </div>
-        )}
-
-        {/* 空间列表 (仅项目组成员可见，学校管理端不包含空间) */}
-        {session.role === 'team_member' && (
-          <div className="pt-3 border-t border-slate-200/80 space-y-1">
-              <div className="flex items-center justify-between px-1.5 py-1">
-                <button
-                  onClick={() => setIsSpacesExpanded(!isSpacesExpanded)}
-                  className="flex items-center space-x-1.5 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
-                  title="折叠/展开空间列表"
-                >
-                  <span>空间 ({safeSpaces.length})</span>
-                  <ChevronDown 
-                    className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${
-                      isSpacesExpanded ? '' : '-rotate-90'
-                    }`} 
-                  />
-                </button>
-                <button
-                  onClick={() => setShowCreateSpaceModal(true)}
-                  className="p-1 rounded-md text-slate-400 hover:text-sky-600 hover:bg-slate-100 transition-colors"
-                  title="新建备赛空间"
-                  id="btn-create-space"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              {isSpacesExpanded && (
-                <div className="space-y-0.5 mt-0.5">
-                  {safeSpaces.map((space) => {
-                    const isExpanded = expandedSpaceIds.has(space.id);
-                    const isSpaceActive = space.id === activeSpaceId;
-
-                    return (
-                      <div key={space.id} className="space-y-0.5">
-                        <div 
-                          className={`flex items-center justify-between px-2 py-1.5 rounded-lg group transition-colors cursor-pointer ${
-                            isSpaceActive ? 'text-slate-900 font-medium bg-slate-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/60'
-                          }`}
-                          onClick={() => {
-                            toggleSpace(space.id);
-                            if (space.id !== activeSpaceId) {
-                              onSelectSpace?.(space.id);
-                            }
-                          }}
-                        >
-                          <div className="flex items-center space-x-2 min-w-0 flex-1">
-                            <Folder className="h-3.5 w-3.5 text-slate-500 flex-shrink-0" />
-                            <span className="text-xs truncate">{space.name}</span>
-                            <ChevronDown 
-                              className={`h-3 w-3 text-slate-400 flex-shrink-0 transition-transform duration-150 ${
-                                isExpanded ? '' : '-rotate-90'
-                              }`} 
-                            />
-                          </div>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onCreateSession?.(space.id);
-                              setActiveTab('coach');
-                            }}
-                            className="p-1 text-slate-400 hover:text-sky-600 hover:bg-slate-100 rounded transition-colors"
-                            title="新建空间专属会话"
-                            id={`btn-new-session-${space.id}`}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-
-                        {isExpanded && (
-                          <div className="pl-5 pr-1 space-y-0.5">
-                            {space.sessions.map((sess) => {
-                              const isSessionActive = activeTab === 'coach' && isSpaceActive && sess.id === activeSessionId;
-                              return (
-                                <div
-                                  key={sess.id}
-                                  onClick={() => {
-                                    onSelectSession?.(space.id, sess.id);
-                                    setActiveTab('coach');
-                                  }}
-                                  className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-xs transition-colors cursor-pointer group/sess ${
-                                    isSessionActive
-                                      ? 'bg-sky-50 text-sky-700 font-medium'
-                                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
-                                  }`}
-                                >
-                                  <div className="flex items-center min-w-0 pr-1.5 space-x-1.5 flex-1">
-                                    <span className="truncate text-xs" title={cleanSessionTitle(sess.title)}>
-                                      {cleanSessionTitle(sess.title)}
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center space-x-1 flex-shrink-0">
-                                    <span className={`text-[10px] font-mono whitespace-nowrap ${
-                                      isSessionActive ? 'text-sky-600 font-medium' : 'text-slate-400'
-                                    }`}>
-                                      {sess.time}
-                                    </span>
-                                    {onDeleteSession && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onDeleteSession(space.id, sess.id);
-                                        }}
-                                        className="opacity-0 group-hover/sess:opacity-100 p-0.5 hover:text-rose-600 rounded text-slate-400 transition-opacity"
-                                        title="删除会话"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
         )}
 
         {/* 常用捷径与工具 (导师端与Admin端不展示) */}
@@ -860,97 +766,6 @@ export default function Sidebar({
           </div>
         )}
       </div>
-
-      {/* Modal: Create New Space */}
-      {showCreateSpaceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center space-x-2">
-                <div className="h-7 w-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
-                  <FolderKanban className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-sm text-slate-900">新建备赛空间与独立工作台</h3>
-                  <p className="text-[10px] text-slate-500">
-                    每个空间拥有专属 sessions、本地工作目录与云端同步节点
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setShowCreateSpaceModal(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateSpaceSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  空间 / 项目名称 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="例如：光子芯海：硅基片上光互连通信模组"
-                  value={newSpaceForm.name}
-                  onChange={(e) => setNewSpaceForm({ ...newSpaceForm, name: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">参赛赛道/组别</label>
-                  <input
-                    type="text"
-                    value={newSpaceForm.trackTag}
-                    onChange={(e) => setNewSpaceForm({ ...newSpaceForm, trackTag: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">负责人姓名</label>
-                  <input
-                    type="text"
-                    placeholder="项目负责人"
-                    value={newSpaceForm.leader}
-                    onChange={(e) => setNewSpaceForm({ ...newSpaceForm, leader: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">申报高校</label>
-                <input
-                  type="text"
-                  value={newSpaceForm.school}
-                  onChange={(e) => setNewSpaceForm({ ...newSpaceForm, school: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateSpaceModal(false)}
-                  className="px-3 py-1.5 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold shadow-xs"
-                >
-                  确认创建
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
       </div>
     </aside>
   );
