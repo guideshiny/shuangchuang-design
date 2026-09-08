@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { ProjectItem, UserSession } from '../types';
 import DefenseSelectorScreen from './defense/DefenseSelectorScreen';
 import DefensePrepScreen from './defense/DefensePrepScreen';
+import DefenseRoadshowScreen from './defense/DefenseRoadshowScreen';
 import DefenseSessionScreen from './defense/DefenseSessionScreen';
 import DefenseReportScreen from './defense/DefenseReportScreen';
-import { DefenseProject, ModeDef, DefenseSessionConfig, DefenseHistoryItem } from './defense/defenseTypes';
+import { DefenseProject, ModeDef, DefenseSessionConfig, DefenseHistoryItem, RoadshowEvaluation } from './defense/defenseTypes';
 import { MOCK_DEFENSE_PROJECTS, TRAINING_MODES } from './defense/defenseConstants';
 
 interface SceneDefenseTrainingProps {
@@ -13,7 +14,7 @@ interface SceneDefenseTrainingProps {
 }
 
 export default function SceneDefenseTraining({ currentProject, session }: SceneDefenseTrainingProps) {
-  const [view, setView] = useState<'selector' | 'prep' | 'session' | 'report'>('selector');
+  const [view, setView] = useState<'selector' | 'prep' | 'roadshow' | 'session' | 'report'>('selector');
 
   const getDefenseProject = (p?: ProjectItem): DefenseProject => {
     if (p) {
@@ -25,6 +26,7 @@ export default function SceneDefenseTraining({ currentProject, session }: SceneD
           ? `核心优势：${p.strengthsLabels.join('、')}。重点突破关键测量与精密质检技术壁垒。` 
           : '突破关键测量与精密质检技术壁垒，实现工业产线自主可控。',
         tags: [
+          '当前参赛项目',
           p.trackLabel,
           p.stageName ? `阶段: ${p.stageName}` : '校内A类重点',
           p.grade ? `评级: ${p.grade}级` : '重点项目',
@@ -50,21 +52,42 @@ export default function SceneDefenseTraining({ currentProject, session }: SceneD
     difficulty: 'standard',
     rounds: 'unlimited',
     timeLimit: 90,
-    elevatorDuration: '1min'
+    elevatorDuration: '1min',
+    roadshowDuration: '5min',
+    teleprompterMode: 'full_script',
+    autoTransitionToQA: true
   });
   const [isReplay, setIsReplay] = useState(false);
   const [activeHistoryItem, setActiveHistoryItem] = useState<DefenseHistoryItem | undefined>();
+  const [isPostRoadshow, setIsPostRoadshow] = useState(false);
+  const [roadshowEvaluation, setRoadshowEvaluation] = useState<RoadshowEvaluation | undefined>();
 
   const handleStartPrep = (p: DefenseProject, m: ModeDef, config: DefenseSessionConfig) => {
     setSelectedProject(p);
     setSelectedMode(m);
     setCurrentConfig(config);
     setIsReplay(false);
+    setIsPostRoadshow(false);
+    setRoadshowEvaluation(undefined);
     setView('prep');
   };
 
   const handleStartSession = () => {
-    setView('session');
+    if (selectedMode.id === 'roadshow') {
+      setView('roadshow');
+    } else {
+      setView('session');
+    }
+  };
+
+  const handleFinishRoadshow = (evalData: RoadshowEvaluation, proceedToQA: boolean) => {
+    setRoadshowEvaluation(evalData);
+    if (proceedToQA) {
+      setIsPostRoadshow(true);
+      setView('session');
+    } else {
+      setView('report');
+    }
   };
 
   const handleViewReport = (p: DefenseProject, m: ModeDef, historyItem?: DefenseHistoryItem) => {
@@ -81,6 +104,8 @@ export default function SceneDefenseTraining({ currentProject, session }: SceneD
   const handleRestart = () => {
     setView('selector');
     setIsReplay(false);
+    setIsPostRoadshow(false);
+    setRoadshowEvaluation(undefined);
   };
 
   const handleReplay = () => {
@@ -109,13 +134,25 @@ export default function SceneDefenseTraining({ currentProject, session }: SceneD
         />
       )}
 
+      {view === 'roadshow' && selectedProject && selectedMode && (
+        <DefenseRoadshowScreen
+          project={selectedProject}
+          mode={selectedMode}
+          config={currentConfig}
+          onFinishRoadshow={handleFinishRoadshow}
+          onBack={() => setView('prep')}
+        />
+      )}
+
       {view === 'session' && selectedProject && selectedMode && (
         <DefenseSessionScreen
           project={selectedProject}
           mode={selectedMode}
           config={currentConfig}
           onFinish={handleFinish}
-          onBack={() => setView('prep')}
+          onBack={() => setView(isPostRoadshow ? 'roadshow' : 'prep')}
+          isPostRoadshow={isPostRoadshow}
+          roadshowEval={roadshowEvaluation}
         />
       )}
 
@@ -126,6 +163,7 @@ export default function SceneDefenseTraining({ currentProject, session }: SceneD
           onRestart={handleRestart}
           onReplay={handleReplay}
           historyItem={activeHistoryItem}
+          roadshowEvaluation={roadshowEvaluation}
         />
       )}
     </div>

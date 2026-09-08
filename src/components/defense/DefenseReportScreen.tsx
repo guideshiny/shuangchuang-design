@@ -17,9 +17,10 @@ import {
   ShieldCheck,
   Zap
 } from 'lucide-react';
-import { DefenseProject, ModeDef, DimensionScore, DefenseHistoryItem } from './defenseTypes';
+import { DefenseProject, ModeDef, DimensionScore, DefenseHistoryItem, RoadshowEvaluation } from './defenseTypes';
 import { ScoreRing, RadarChart } from './DefenseCharts';
 import { DIMENSION_COLORS } from './defenseConstants';
+import { Presentation, Target, Mic, MessageSquare } from 'lucide-react';
 
 interface Props {
   project: DefenseProject;
@@ -27,6 +28,7 @@ interface Props {
   onRestart: () => void;
   onReplay: () => void;
   historyItem?: DefenseHistoryItem;
+  roadshowEvaluation?: RoadshowEvaluation;
 }
 
 export default function DefenseReportScreen({
@@ -34,9 +36,62 @@ export default function DefenseReportScreen({
   mode,
   onRestart,
   onReplay,
-  historyItem
+  historyItem,
+  roadshowEvaluation
 }: Props) {
   const [expandedRound, setExpandedRound] = useState<string | null>('r2');
+
+  // Fallback roadshow evaluation if mode is roadshow or historyItem indicates roadshow
+  const activeRoadshowEval: RoadshowEvaluation | undefined = roadshowEvaluation || (mode.id === 'roadshow' ? {
+    timePacingScore: 94,
+    contentCompletenessScore: 100,
+    persuasivenessScore: 91,
+    stagePresenceScore: 93,
+    totalScore: 92,
+    timeSpentSeconds: 292,
+    plannedTotalSeconds: 300,
+    slideDurations: [
+      { slideId: 1, title: '痛点洞察与国家战略', spent: 34, planned: 35 },
+      { slideId: 2, title: '三大技术天花板', spent: 42, planned: 40 },
+      { slideId: 3, title: '超快纳秒成像算法突破', spent: 48, planned: 50 },
+      { slideId: 4, title: '产品矩阵与实测对标', spent: 43, planned: 45 },
+      { slideId: 5, title: '商业模式闭环与毛利', spent: 44, planned: 45 },
+      { slideId: 6, title: '标杆客户与订单履约', spent: 38, planned: 40 },
+      { slideId: 7, title: '师生共创与股权治理', spent: 33, planned: 35 },
+      { slideId: 8, title: '三年财务与社会价值', spent: 28, planned: 30 },
+    ],
+    judgeComments: [
+      {
+        judgeName: '张怀德',
+        role: '组长·高校泰斗',
+        comment: '核心物理机理阐释透彻，15纳秒曝光瞬态冻结非常有学术深度与工程壁垒。',
+        rating: '优秀'
+      },
+      {
+        judgeName: '李元亨',
+        role: '一线创投合伙人',
+        comment: '3500万意向订单和宁王180天中试验证打消了投资人落地顾虑，单机58%毛利经得起推敲。',
+        rating: '优秀'
+      },
+      {
+        judgeName: '王书敏',
+        role: '教育部双创专家',
+        comment: '学生负责人62%控股且全职创业，师生共创产权明晰，国赛金奖立德树人典型。',
+        rating: '优秀'
+      },
+      {
+        judgeName: '陈致远',
+        role: '硬科技产业CTO',
+        comment: '产线节拍适配度高，建议在答辩中着重展示抗车间温漂和粉尘抗扰度的长效测试数据。',
+        rating: '良好'
+      }
+    ],
+    suggestedQAQuestions: [
+      '第3页提到的15纳秒超快干涉，在动力电池高反射率金属箔片表面如何消除衍射光晕？',
+      '第5页商业模式毛利率58%，若关键光学镜片被海外断供，成本会上升多少？',
+      '第6页宁德时代一级供应商中试180天，是否有出具第三方CMA/CNAS检验公函？'
+    ]
+  } : undefined);
 
   const radarData: DimensionScore[] = [
     { label: '创新性', value: 88, color: DIMENSION_COLORS.innovation, comment: '技术创新点突出，具有明显先进性' },
@@ -141,6 +196,186 @@ export default function DefenseReportScreen({
           </div>
         </div>
       </div>
+
+      {/* Special Roadshow Diagnostic Panel (If activeRoadshowEval is present) */}
+      {activeRoadshowEval && (
+        <div className="bg-gradient-to-br from-indigo-900 via-slate-900 to-purple-950 rounded-2xl p-6 sm:p-7 text-white shadow-xl border border-indigo-500/30 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-400/40 text-purple-300 flex items-center justify-center">
+                <Presentation size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-white">全真实战路演复盘与逐页控时诊断</h3>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    国赛金奖级演练
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  总控时 {Math.floor(activeRoadshowEval.timeSpentSeconds / 60)}分{(activeRoadshowEval.timeSpentSeconds % 60).toString().padStart(2, '0')}秒 / 设定 {Math.floor(activeRoadshowEval.plannedTotalSeconds / 60)}分00秒 · 8页幻灯片全通
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-300">综合路演分</span>
+              <span className="text-2xl font-black font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 rounded-xl">
+                {activeRoadshowEval.totalScore}
+              </span>
+            </div>
+          </div>
+
+          {/* 4 Performance Sub-Scores */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 space-y-1">
+              <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                <Clock size={12} className="text-emerald-400" />
+                <span>控时精准度</span>
+              </div>
+              <div className="text-xl font-bold font-mono text-emerald-400">{activeRoadshowEval.timePacingScore}%</div>
+              <div className="text-[10px] text-slate-400">节奏把控平稳自然</div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 space-y-1">
+              <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                <Target size={12} className="text-indigo-400" />
+                <span>PPT架构完整度</span>
+              </div>
+              <div className="text-xl font-bold font-mono text-indigo-300">{activeRoadshowEval.contentCompletenessScore}%</div>
+              <div className="text-[10px] text-slate-400">8大核心模块无遗漏</div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 space-y-1">
+              <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                <TrendingUp size={12} className="text-purple-400" />
+                <span>商业说服力</span>
+              </div>
+              <div className="text-xl font-bold font-mono text-purple-300">{activeRoadshowEval.persuasivenessScore}分</div>
+              <div className="text-[10px] text-slate-400">3500万在手订单硬背书</div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 space-y-1">
+              <div className="text-[11px] text-slate-400 flex items-center gap-1">
+                <Mic size={12} className="text-amber-400" />
+                <span>演讲台风与语速</span>
+              </div>
+              <div className="text-xl font-bold font-mono text-amber-300">{activeRoadshowEval.stagePresenceScore}分</div>
+              <div className="text-[10px] text-slate-400">平均215字/分黄金速率</div>
+            </div>
+          </div>
+
+          {/* Slide-by-Slide Time Pacing Progress Bar Chart */}
+          <div className="bg-black/30 border border-white/10 rounded-xl p-4 space-y-3">
+            <div className="flex items-center justify-between text-xs text-slate-300">
+              <span className="font-bold flex items-center gap-1.5">
+                <Clock size={13} className="text-indigo-400" />
+                <span>逐页实测耗时 vs 黄金建议配时走势</span>
+              </span>
+              <span className="text-[11px] text-slate-400">绿色=精准配时 · 橙色=超时风险</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              {activeRoadshowEval.slideDurations.map((s, idx) => {
+                const isOvertime = s.spent > s.planned * 1.15;
+                return (
+                  <div key={idx} className="bg-white/5 border border-white/10 rounded-lg p-2.5 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-indigo-300">P{s.slideId}</span>
+                      <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded ${
+                        isOvertime ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                      }`}>
+                        {s.spent}s / {s.planned}s
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-300 truncate font-medium">
+                      {s.title}
+                    </div>
+                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full ${isOvertime ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                        style={{ width: `${Math.min(100, (s.spent / s.planned) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Expert Judges Real-time Feedback Quotes */}
+          <div className="space-y-2.5">
+            <div className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <MessageSquare size={14} className="text-purple-400" />
+              <span>评委席现场点评纪要（直通问答靶向点）：</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {activeRoadshowEval.judgeComments.map((jc, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">{jc.judgeName} · <span className="text-purple-300 font-normal">{jc.role}</span></span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-bold border border-indigo-400/30">
+                      评级: {jc.rating}
+                    </span>
+                  </div>
+                  <p className="text-slate-300 text-[11px] leading-relaxed">
+                    "{jc.comment}"
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Live Multi-Judge Voice Defense Q&A Rounds if present */}
+          {activeRoadshowEval.qaQuestionsAndAnswers && activeRoadshowEval.qaQuestionsAndAnswers.length > 0 && (
+            <div className="space-y-3 pt-3 border-t border-white/10">
+              <div className="text-xs font-bold text-slate-200 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Mic size={14} className="text-amber-400" />
+                  <span>多评委语音答辩质询全景回溯（{activeRoadshowEval.qaQuestionsAndAnswers.length}轮）</span>
+                </span>
+                <span className="text-[11px] font-mono text-amber-300 font-bold">
+                  答辩实测均分: {activeRoadshowEval.qaAverageScore || 95}分
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                {activeRoadshowEval.qaQuestionsAndAnswers.map((item, idx) => (
+                  <div key={idx} className="bg-white/5 border border-white/10 rounded-xl p-3 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-[10px]">
+                          Q{idx + 1}
+                        </span>
+                        <span className="font-bold text-white">{item.judgeName}</span>
+                        <span className="text-purple-300 text-[10px]">（{item.role}）</span>
+                      </div>
+                      <span className="font-mono font-bold text-emerald-300 text-xs">
+                        得分: {item.score}
+                      </span>
+                    </div>
+
+                    <div className="bg-black/40 rounded-lg p-2.5 text-slate-200 text-[11px] leading-relaxed">
+                      <span className="text-amber-300 font-bold mr-1.5">评委问点:</span>
+                      {item.question}
+                    </div>
+
+                    <div className="bg-indigo-950/40 border border-indigo-500/20 rounded-lg p-2.5 text-indigo-100 text-[11px] leading-relaxed">
+                      <span className="text-indigo-300 font-bold mr-1.5">选手作答:</span>
+                      {item.answer}
+                    </div>
+
+                    <div className="text-[10px] text-slate-300 flex items-start gap-1">
+                      <Sparkles size={12} className="text-amber-400 shrink-0 mt-0.5" />
+                      <span>{item.comment}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Grid: 6-Dimension Radar on Left, Weakness Progress Bars on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

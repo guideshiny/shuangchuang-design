@@ -16,7 +16,9 @@ import {
   CornerDownLeft,
   ArrowLeft
 } from 'lucide-react';
-import { DefenseProject, ModeDef, DefenseSessionConfig, DefenseMessage } from './defenseTypes';
+import { DefenseProject, ModeDef, DefenseSessionConfig, DefenseMessage, RoadshowEvaluation } from './defenseTypes';
+import { Presentation, Flame, Video } from 'lucide-react';
+import DefenseVideoWindow from './DefenseVideoWindow';
 
 interface Props {
   project: DefenseProject;
@@ -24,6 +26,8 @@ interface Props {
   config: DefenseSessionConfig;
   onFinish: () => void;
   onBack?: () => void;
+  isPostRoadshow?: boolean;
+  roadshowEval?: RoadshowEvaluation;
 }
 
 export default function DefenseSessionScreen({
@@ -31,7 +35,9 @@ export default function DefenseSessionScreen({
   mode,
   config,
   onFinish,
-  onBack
+  onBack,
+  isPostRoadshow,
+  roadshowEval
 }: Props) {
   const [messages, setMessages] = useState<DefenseMessage[]>([]);
   const [input, setInput] = useState('');
@@ -39,7 +45,73 @@ export default function DefenseSessionScreen({
   const [timeLeft, setTimeLeft] = useState(config.timeLimit || 90);
   const [isStreaming, setIsStreaming] = useState(false);
   const [roundCount, setRoundCount] = useState(1);
+  const [showVideoWindow, setShowVideoWindow] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Toggle real voice recognition
+  const toggleVoiceRecording = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+        recognitionRef.current = null;
+      }
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-CN';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onstart = () => {
+          setIsRecording(true);
+        };
+
+        recognition.onresult = (event: any) => {
+          let transcript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (transcript) {
+            setInput(prev => prev ? `${prev} ${transcript}` : transcript);
+          }
+        };
+
+        recognition.onerror = () => {
+          setIsRecording(false);
+        };
+
+        recognition.onend = () => {
+          setIsRecording(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+      } catch {
+        setIsRecording(false);
+      }
+    } else {
+      setIsRecording(true);
+      setTimeout(() => setIsRecording(false), 2000);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {}
+      }
+    };
+  }, []);
 
   // Auto-scroll when messages or streaming state changes
   useEffect(() => {
@@ -62,7 +134,9 @@ export default function DefenseSessionScreen({
     const opener = setTimeout(() => {
       setIsStreaming(false);
       let initialQuestion = '';
-      if (mode.id === 'elevator') {
+      if (isPostRoadshow) {
+        initialQuestion = `刚刚认真听完了你们团队关于《${project.name}》的现场路演陈述，幻灯片架构与控时整体可圈可点！评委席在商议后，决定首先向团队抛出两点核心靶向质询：第一，你在路演第3页重点介绍的15纳秒超快激光干涉技术，在工业产线连续高温与机械震动恶劣工况下，如何保障光路热漂移不影响微米级测量精度？第二，在手3500万意向订单中，第一批确认交付的620万订单综合净利润率是多少？请第一负责人逐一正面回应！`;
+      } else if (mode.id === 'elevator') {
         initialQuestion = `各位答辩人好。欢迎进入电梯演讲实训舱，当前设定为【${config.elevatorDuration === '3min' ? '3分钟标准版' : '1分钟极速版'}】。请在倒计时内高密度阐述：你们针对哪个真实产业痛点，打造了何种不可替代的解决方案，以及当前取得的商业化印证成果？请开始陈述！`;
       } else if (mode.id === 'followup') {
         initialQuestion = `你们在商业计划书中多次强调“自研核心算法具有绝对技术壁垒”，但我注意到国内外竞品同样在加速迭代。请问：如果行业龙头厂商下调价格或直接提供免费基础功能，你们的客户迁移成本究竟由什么来保障？请给出具体测算指标。`;
@@ -83,7 +157,7 @@ export default function DefenseSessionScreen({
     }, 1400);
 
     return () => clearTimeout(opener);
-  }, [mode.id, project.name, config.elevatorDuration]);
+  }, [mode.id, project.name, config.elevatorDuration, isPostRoadshow]);
 
   // User sends a response
   const handleSend = () => {
@@ -169,7 +243,20 @@ export default function DefenseSessionScreen({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setShowVideoWindow(!showVideoWindow)}
+            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors ${
+              showVideoWindow
+                ? 'bg-purple-50 text-purple-700 border-purple-200 shadow-xs'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+            title="开启或隐藏答辩视讯双向连线窗口"
+          >
+            <Video size={14} className={showVideoWindow ? 'text-purple-600' : 'text-slate-400'} />
+            <span className="hidden sm:inline">{showVideoWindow ? '视讯连线 开' : '视讯连线'}</span>
+          </button>
+
           <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
             <span>当前轮次：</span>
             <span className="font-mono font-bold text-indigo-600">第 {roundCount} 轮</span>
@@ -189,6 +276,19 @@ export default function DefenseSessionScreen({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Column: Interactive Chat Stream & Input Area */}
         <div className="lg:col-span-8 flex flex-col bg-white border border-slate-200 rounded-2xl shadow-xs overflow-hidden h-[74vh]">
+          {isPostRoadshow && (
+            <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white px-4 py-2.5 flex items-center justify-between text-xs border-b border-indigo-500/30">
+              <div className="flex items-center gap-2">
+                <Presentation size={14} className="text-purple-300" />
+                <span className="font-bold">路演陈述已结束，无缝转入评委针对性现场答辩</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-purple-200 font-mono text-[11px]">
+                <Flame size={12} className="text-amber-400" />
+                <span>靶向追问模式</span>
+              </div>
+            </div>
+          )}
+
           {/* Messages Scroll Area */}
           <div
             ref={scrollRef}
@@ -356,13 +456,13 @@ export default function DefenseSessionScreen({
               <div className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5">
                 <button
                   type="button"
-                  onClick={() => setIsRecording(!isRecording)}
-                  className={`p-2 rounded-lg border transition-colors ${
+                  onClick={toggleVoiceRecording}
+                  className={`p-2 rounded-lg border transition-all ${
                     isRecording
-                      ? 'bg-rose-50 border-rose-300 text-rose-600'
+                      ? 'bg-rose-50 border-rose-400 text-rose-600 ring-2 ring-rose-300 animate-pulse'
                       : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'
                   }`}
-                  title={isRecording ? '停止模拟录音' : '开启现场录音模拟'}
+                  title={isRecording ? '点击停止麦克风录音' : '开启麦克风语音转写回答'}
                 >
                   <Mic size={15} />
                 </button>
@@ -381,8 +481,17 @@ export default function DefenseSessionScreen({
           </div>
         </div>
 
-        {/* Right Column: Persona, Real-time Focus, Early Exit */}
+        {/* Right Column: Video Window, Persona, Real-time Focus, Early Exit */}
         <div className="lg:col-span-4 space-y-4">
+          {/* Live Video Window */}
+          {showVideoWindow && (
+            <DefenseVideoWindow
+              mode="dual"
+              isJudgeSpeaking={isStreaming}
+              onClose={() => setShowVideoWindow(false)}
+            />
+          )}
+
           {/* Judge Persona Card */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">

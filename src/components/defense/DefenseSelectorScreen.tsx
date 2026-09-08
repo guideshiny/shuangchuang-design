@@ -10,12 +10,14 @@ import {
   History, 
   ChevronRight, 
   Sparkles, 
-  CheckCircle2, 
   SlidersHorizontal,
   Flame,
   Swords,
   ShieldCheck,
-  Award
+  Award,
+  Presentation,
+  Zap,
+  Target
 } from 'lucide-react';
 import { DefenseProject, ModeDef, DefenseSessionConfig, DefenseHistoryItem } from './defenseTypes';
 import { MOCK_DEFENSE_PROJECTS, TRAINING_MODES, RECENT_DEFENSE_HISTORY } from './defenseConstants';
@@ -33,7 +35,6 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
   const [selectedMode, setSelectedMode] = useState<ModeDef | null>(TRAINING_MODES[0]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Synchronize with global project selected in sidebar
   useEffect(() => {
     if (initialProject) {
       setSelectedProject(initialProject);
@@ -52,6 +53,15 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
   const handleModeClick = (mode: ModeDef) => {
     setSelectedMode(mode);
     setIsDrawerOpen(true);
+    if (mode.id === 'elevator') {
+      setConfig((c) => ({ ...c, judgeMode: 'single' }));
+    } else if (mode.id === 'followup') {
+      setConfig((c) => ({ ...c, judgeMode: 'single', difficulty: 'high_pressure' }));
+    } else if (mode.id === 'weakness') {
+      setConfig((c) => ({ ...c, judgeMode: 'single' }));
+    } else if (mode.id === 'adversarial') {
+      setConfig((c) => ({ ...c, judgeMode: 'panel', difficulty: 'high_pressure' }));
+    }
   };
 
   const handleStartWithCurrent = () => {
@@ -62,7 +72,7 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
   };
 
   return (
-    <div className="space-y-8 pb-16" id="defense-selector-screen">
+    <div className="space-y-8 pb-16">
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -94,43 +104,61 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
               <span>答辩复盘与失分点专项补强</span>
             </div>
           </div>
+
+          {/* Current Active Linked Project from Sidebar */}
+          <div className="pt-2 flex flex-wrap items-center gap-2.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 text-xs text-white">
+              <Folder size={14} className="text-amber-400 shrink-0" />
+              <span>当前答辩实训项目：</span>
+              <span className="font-bold text-amber-300">{selectedProject.name}</span>
+              <span className="text-[11px] text-indigo-200">({selectedProject.track})</span>
+            </div>
+            <span className="text-[11px] text-slate-300">
+              · 已通过左侧项目栏全局联动，评委人设与靶向题库已定向匹配
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Current Active Project Banner (Synchronized Globally with Left Sidebar) */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shrink-0 mt-0.5">
-            <Folder size={20} />
+      {/* Roadshow Highlight Feature Card */}
+      <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-2xl p-4 sm:p-5 text-white shadow-md border border-purple-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-xl bg-purple-500/20 border border-purple-400/30 text-purple-300 flex items-center justify-center shrink-0">
+            <Presentation size={24} />
           </div>
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-200">
-                {selectedProject.track}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-400/25 text-purple-200 border border-purple-300/30">
+                重磅新升级 · 2026国赛标准
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                <CheckCircle2 size={11} />
-                <span>当前参赛答辩项目</span>
-              </span>
-              {selectedProject.tags.map(tag => (
-                <span key={tag} className="text-[10px] text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200/60 hidden sm:inline-block">
-                  {tag}
-                </span>
-              ))}
+              <h3 className="text-sm sm:text-base font-bold text-white">
+                全真模拟路演讲台 (Roadshow Arena)
+              </h3>
             </div>
-            <h2 className="text-base font-bold text-slate-900 truncate" title={selectedProject.name}>
-              {selectedProject.name}
-            </h2>
-            <p className="text-xs text-slate-500 line-clamp-1">
-              {selectedProject.summary}
+            <p className="text-xs text-slate-300 mt-1">
+              配备 16:9 投影大屏、智能金奖逐页提词、脱稿记忆锚点、评委席神态动态反馈与答辩无缝转场
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0 md:self-center bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80 text-xs text-slate-500">
-          <Info size={14} className="text-indigo-500 shrink-0" />
-          <span>全局选定项目 · 更换请在左侧边栏顶部的【当前参赛项目】中切换</span>
-        </div>
+        <button
+          onClick={() => {
+            const roadshowMode = TRAINING_MODES.find(m => m.id === 'roadshow') || TRAINING_MODES[0];
+            setSelectedMode(roadshowMode);
+            const roadshowConf: DefenseSessionConfig = {
+              ...config,
+              roadshowDuration: '5min',
+              teleprompterMode: 'full_script',
+              autoTransitionToQA: true
+            };
+            setConfig(roadshowConf);
+            onStart(selectedProject, roadshowMode, roadshowConf);
+          }}
+          className="shrink-0 px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-400 hover:to-indigo-400 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
+        >
+          <Play size={14} className="fill-current" />
+          <span>立即登台演练路演</span>
+        </button>
       </div>
 
       {/* Mode Selection */}
@@ -141,8 +169,8 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
               <SlidersHorizontal size={18} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">选择实训模式与参数配置</h2>
-              <p className="text-xs text-slate-500">点击模式卡片可展开右侧详细参数配置（轮次、单题时限、评委风格），配置完毕即可进入答辩舱实训</p>
+              <h2 className="text-base font-bold text-slate-900">选择实训模式与配置</h2>
+              <p className="text-xs text-slate-500">点击模式卡片可展开右侧详细参数配置（轮次、单题时限、评委风格）并启动答辩</p>
             </div>
           </div>
         </div>
@@ -306,7 +334,15 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">配置本次演练的评委参数与对抗烈度</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {selectedMode.id === 'elevator'
+                          ? '配置极速演讲时长与高密度表达节奏'
+                          : ['followup', 'weakness', 'adversarial'].includes(selectedMode.id)
+                          ? '配置本次专项质询的答辩轮次与作答时限'
+                          : selectedMode.id === 'roadshow'
+                          ? '配置路演排位时限与提词辅导模式'
+                          : '配置本次演练的评委参数与对抗烈度'}
+                      </p>
                     </div>
                   </div>
                   <button
@@ -326,59 +362,156 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
 
                 {/* Configuration Options */}
                 <div className="space-y-5">
-                  {/* Judge Mode */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-800 block mb-2">评委席规模</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { id: 'single', label: '单主审评委', sub: '自动匹配对应赛道首席专家' },
-                        { id: 'panel', label: '3人联合评委席', sub: '投资人 + 产业学者 + 财务法务' }
-                      ].map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => setConfig((c) => ({ ...c, judgeMode: item.id as any }))}
-                          className={`p-3 rounded-xl border text-left transition-all ${
-                            config.judgeMode === item.id
-                              ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900'
-                              : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
-                          }`}
-                        >
-                          <div className="text-xs font-bold">{item.label}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">{item.sub}</div>
-                        </button>
-                      ))}
+                  {/* Mode-specific context banner */}
+                  {selectedMode.id === 'elevator' && (
+                    <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-3 text-xs text-amber-900 flex items-start gap-2.5">
+                      <Zap size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div className="leading-relaxed">
+                        <span className="font-bold">电梯演讲模式：</span>
+                        聚焦极速高密度自主陈述与商业壁垒提炼，无需配置评委席位；演练结束后将自动输出六维表达力与痛点清晰度分析报告。
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Difficulty Style */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-800 block mb-2">评委质询风格与烈度</label>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      {[
-                        { id: 'friendly', title: '温和肯定', sub: '先鼓励再提建议' },
-                        { id: 'standard', title: '标准专业', sub: '中立直奔核心漏洞' },
-                        { id: 'high_pressure', title: '高压刁难', sub: '连环抓痛脚极限施压' }
-                      ].map((s) => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => setConfig((c) => ({ ...c, difficulty: s.id as any }))}
-                          className={`p-3 rounded-xl border text-center transition-all ${
-                            config.difficulty === s.id
-                              ? 'border-indigo-600 bg-indigo-50/60 text-indigo-900 font-bold'
-                              : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
-                          }`}
-                        >
-                          <div className="text-xs">{s.title}</div>
-                          <div className="text-[10px] text-slate-400 mt-0.5">{s.sub}</div>
-                        </button>
-                      ))}
+                  {selectedMode.id === 'followup' && (
+                    <div className="bg-sky-50/80 border border-sky-200/80 rounded-xl p-3 text-xs text-sky-900 flex items-start gap-2.5">
+                      <Target size={16} className="text-sky-600 shrink-0 mt-0.5" />
+                      <div className="leading-relaxed">
+                        <span className="font-bold">评委预置：</span>
+                        系统已自动选定国赛资深常委专家，锁定申报书单一核心逻辑漏洞连环下钻追问，无需手动配置评委席位。
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Mode-specific: Elevator Pitch Duration */}
-                  {selectedMode.id === 'elevator' ? (
+                  {selectedMode.id === 'weakness' && (
+                    <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3 text-xs text-emerald-900 flex items-start gap-2.5">
+                      <Flame size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="leading-relaxed">
+                        <span className="font-bold">评委预置：</span>
+                        系统已读取项目对标评测画像，定向匹配薄弱维度专项评委（技术壁垒/商业落地/财务测算）展开精准突击。
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedMode.id === 'adversarial' && (
+                    <div className="bg-rose-50/80 border border-rose-200/80 rounded-xl p-3 text-xs text-rose-900 flex items-start gap-2.5">
+                      <Swords size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                      <div className="leading-relaxed">
+                        <span className="font-bold">评委预置：</span>
+                        系统已锁定挑剔型一线硬科技投资人与严苛国赛评审专家，全程进行极限抗辩与对抗性质询。
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Judge Mode (评委席规模 / 评委选择)：电梯演讲、高压追问、弱项突击、对抗性演练均不显示 */}
+                  {!['elevator', 'followup', 'weakness', 'adversarial', 'roadshow'].includes(selectedMode.id) && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-800 block mb-2">评委选择 / 席位规模</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { id: 'single', label: '单主审评委', sub: '自动匹配对应赛道首席专家' },
+                          { id: 'panel', label: '3人联合评委席', sub: '投资人 + 产业学者 + 财务法务' }
+                        ].map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setConfig((c) => ({ ...c, judgeMode: item.id as any }))}
+                            className={`p-3 rounded-xl border text-left transition-all ${
+                              config.judgeMode === item.id
+                                ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900'
+                                : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
+                            }`}
+                          >
+                            <div className="text-xs font-bold">{item.label}</div>
+                            <div className="text-[11px] text-slate-400 mt-0.5">{item.sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Difficulty Style (仅非电梯演讲、非路演显示) */}
+                  {!['elevator', 'roadshow'].includes(selectedMode.id) && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-800 block mb-2">评委质询风格与烈度</label>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {[
+                          { id: 'friendly', title: '温和肯定', sub: '先鼓励再提建议' },
+                          { id: 'standard', title: '标准专业', sub: '中立直奔核心漏洞' },
+                          { id: 'high_pressure', title: '高压刁难', sub: '连环抓痛脚极限施压' }
+                        ].map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => setConfig((c) => ({ ...c, difficulty: s.id as any }))}
+                            className={`p-3 rounded-xl border text-center transition-all ${
+                              config.difficulty === s.id
+                                ? 'border-indigo-600 bg-indigo-50/60 text-indigo-900 font-bold'
+                                : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
+                            }`}
+                          >
+                            <div className="text-xs">{s.title}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">{s.sub}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mode-specific: Roadshow or Elevator Pitch or Standard QA */}
+                  {selectedMode.id === 'roadshow' ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-xs font-bold text-slate-800 block mb-2">国赛路演标准时限</label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {[
+                            { id: '3min', label: '3分钟极速路演', sub: '校赛初选/电梯快报标准' },
+                            { id: '5min', label: '5分钟金牌标准', sub: '省赛决赛/复赛官方标准' },
+                            { id: '8min', label: '8分钟国赛总决选', sub: '全国总决赛排位赛标准' },
+                            { id: '10min', label: '10分钟产业资本路演', sub: '天使/VC高密度尽调标准' }
+                          ].map((d) => (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => setConfig((c) => ({ ...c, roadshowDuration: d.id as any }))}
+                              className={`p-3 rounded-xl border text-left transition-all ${
+                                (config.roadshowDuration || '5min') === d.id
+                                  ? 'border-purple-600 bg-purple-50 text-purple-950 font-bold'
+                                  : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
+                              }`}
+                            >
+                              <div className="text-xs font-bold">{d.label}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">{d.sub}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-800 block mb-2">提词辅助模式</label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {[
+                            { id: 'full_script', label: '国赛金奖完整讲稿', sub: '提供逐字稿、记忆锚点与推荐语速' },
+                            { id: 'bullets', label: '脱稿要点提词', sub: '只提示核心数据与关键论点' }
+                          ].map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setConfig((c) => ({ ...c, teleprompterMode: m.id as any }))}
+                              className={`p-3 rounded-xl border text-left transition-all ${
+                                (config.teleprompterMode || 'full_script') === m.id
+                                  ? 'border-purple-600 bg-purple-50 text-purple-950 font-bold'
+                                  : 'border-slate-200 bg-white hover:border-slate-300 text-slate-700'
+                              }`}
+                            >
+                              <div className="text-xs font-bold">{m.label}</div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">{m.sub}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : selectedMode.id === 'elevator' ? (
                     <div>
                       <label className="text-xs font-bold text-slate-800 block mb-2">演讲陈述时长</label>
                       <div className="grid grid-cols-2 gap-3">
@@ -432,26 +565,28 @@ export default function DefenseSelectorScreen({ onStart, onViewReport, initialPr
                     </div>
                   )}
 
-                  {/* Per Question Time Limit */}
-                  <div>
-                    <label className="text-xs font-bold text-slate-800 block mb-2">单题回答时限</label>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      {[60, 90, 120].map((t) => (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setConfig((c) => ({ ...c, timeLimit: t }))}
-                          className={`py-2 rounded-xl border text-xs font-medium transition-all ${
-                            config.timeLimit === t
-                              ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
-                              : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
-                          }`}
-                        >
-                          {t} 秒
-                        </button>
-                      ))}
+                  {/* Per Question Time Limit (仅非路演、非电梯演讲显示) */}
+                  {!['roadshow', 'elevator'].includes(selectedMode.id) && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-800 block mb-2">单题回答时限</label>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {[60, 90, 120].map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            onClick={() => setConfig((c) => ({ ...c, timeLimit: t }))}
+                            className={`py-2 rounded-xl border text-xs font-medium transition-all ${
+                              config.timeLimit === t
+                                ? 'border-indigo-600 bg-indigo-50 text-indigo-900 font-bold'
+                                : 'border-slate-200 bg-white hover:border-slate-300 text-slate-600'
+                            }`}
+                          >
+                            {t} 秒
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 

@@ -147,7 +147,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({ data, size = 290 }) => {
         const p = getPoint(d.value, i);
         const labelP = getPoint(120, i);
 
-        let textAnchor = 'middle';
+        let textAnchor: 'inherit' | 'start' | 'end' | 'middle' = 'middle';
         if (labelP.x > center + 12) textAnchor = 'start';
         else if (labelP.x < center - 12) textAnchor = 'end';
 

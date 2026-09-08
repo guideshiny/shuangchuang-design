@@ -37,7 +37,11 @@ export default function DefensePrepScreen({
   const [isAnalyzing, setIsAnalyzing] = useState(!skipAnalysis);
   const [loadingStep, setLoadingStep] = useState(0);
 
-  const loadingMessages = [
+  const loadingMessages = mode.id === 'roadshow' ? [
+    'AI 智能体正按2026国赛标准解构并编排8页高清实战路演幻灯片与关键指标...',
+    '正在为每个幻灯片生成金牌讲稿提词、脱稿记忆锚点与推荐语速控时...',
+    '正在邀请国家级高校泰斗、一线创投合伙人与产业CTO入席评委席...'
+  ] : [
     'AI 评委正依据2026国赛标准深度阅读项目计划书...',
     '正在交叉比对该赛道历届金奖与高频易失分点...',
     '正在结合评委挑剔人设提炼核心疑点与靶向题库...'
@@ -71,9 +75,11 @@ export default function DefensePrepScreen({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-                赛前解构报告
+                {mode.id === 'roadshow' ? '路演战前编排' : '赛前解构报告'}
               </span>
-              <h1 className="text-lg font-bold text-slate-900">全息档案解构与靶向考题预测</h1>
+              <h1 className="text-lg font-bold text-slate-900">
+                {mode.id === 'roadshow' ? '全真实战路演编排与评委席预研' : '全息档案解构与靶向考题预测'}
+              </h1>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
               AI 评委视界 (Judge's Horizon) · 提前掌握评委提问动机与潜在痛脚
@@ -87,7 +93,7 @@ export default function DefensePrepScreen({
           className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-xs transition-colors disabled:opacity-50"
         >
           <Play size={14} className="fill-current" />
-          <span>正式进入实训舱</span>
+          <span>{mode.id === 'roadshow' ? '登台开启全真实战路演' : '正式进入实训舱'}</span>
         </button>
       </div>
 
@@ -153,12 +159,24 @@ export default function DefensePrepScreen({
                   <span>•</span>
                   <div className="flex items-center gap-1.5">
                     <Clock size={13} className="text-slate-400" />
-                    <span>单题时限：{config.timeLimit}秒 · {config.rounds === 'unlimited' ? '自然控场' : `${config.rounds}题制`}</span>
+                    <span>
+                      {mode.id === 'roadshow'
+                        ? `路演时限：${config.roadshowDuration || '5min'} · 8页国赛标准幻灯片 · ${config.teleprompterMode === 'bullets' ? '脱稿要点提词' : '完整逐字讲稿'}`
+                        : mode.id === 'elevator'
+                        ? `演讲时限：${config.elevatorDuration === '3min' ? '3分钟标准版 (180s)' : '1分钟极速版 (60s)'} · 极速高密度表达`
+                        : `单题时限：${config.timeLimit}秒 · ${config.rounds === 'unlimited' ? '自然控场' : `${config.rounds}题制`}`}
+                    </span>
                   </div>
                   <span>•</span>
                   <div className="flex items-center gap-1.5">
                     <Cpu size={13} className="text-indigo-600" />
-                    <span className="text-indigo-700 font-medium">难度：{config.difficulty === 'high_pressure' ? '高压严苛' : config.difficulty === 'friendly' ? '温和循诱' : '标准专业'}</span>
+                    <span className="text-indigo-700 font-medium">
+                      {mode.id === 'roadshow'
+                        ? '模式：全真多模态大屏投影'
+                        : mode.id === 'elevator'
+                        ? '模式：结构化极速演练'
+                        : `难度：${config.difficulty === 'high_pressure' ? '高压严苛' : config.difficulty === 'friendly' ? '温和循诱' : '标准专业'}`}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -168,7 +186,7 @@ export default function DefensePrepScreen({
                 className="shrink-0 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm flex items-center gap-2 shadow-xs transition-colors"
               >
                 <Play size={15} className="fill-current" />
-                <span>立即启动答辩舱</span>
+                <span>{mode.id === 'roadshow' ? '立即登台开启路演' : '立即启动答辩舱'}</span>
               </button>
             </div>
 
