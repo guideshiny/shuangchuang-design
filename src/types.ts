@@ -175,6 +175,19 @@ export interface WorkOrderTask {
   dueDays: number;
 }
 
+export type WorkOrderStatus = 
+  | 'draft_ai_suggested'       // 1. AI建议书的建议工单草稿 (导师可增删改)
+  | 'pending_team_accept'      // 2. 导师确认后推送给项目团队 (待团队接收)
+  | 'team_rejected'            // 项目团队驳回工单 (附驳回理由)
+  | 'team_in_progress'         // 3. 项目团队接受工单进行修改中
+  | 'team_submitted'           // 4. 项目修改完毕推送确认 (待导师验收)
+  | 'need_rework'              // 导师验收不满意，退回重新修改
+  | 'closed_completed'         // 导师确认完成，工单闭环归档
+  | 'pending_student'          // 兼容旧字段映射
+  | 'student_submitted'        // 兼容旧字段映射
+  | 'expert_checked'           // 兼容旧字段映射
+  | 'overdue';
+
 export interface SupervisionWorkOrder {
   id: string;
   projectId: string;
@@ -184,9 +197,23 @@ export interface SupervisionWorkOrder {
   mentorId: string;
   mentorName: string;
   mentorTitle: string;
+  batchTitle?: string; // 辅导批次名称
+  coMentors?: {
+    name: string;
+    title: string;
+    roleTag: string; // 如：技术导师、商业导师、总教练
+  }[];
   sessionDate: string;
   sessionType: 'online_meeting' | 'offline_coaching' | 'mock_defense';
   audioDurationMinutes: number;
+  meetingRecord?: {
+    title: string;
+    mediaType: 'audio' | 'video';
+    durationText: string;
+    uploadTime: string;
+    summary: string;
+    transcriptHighlights: string[];
+  };
   diagnosticSummary: {
     coreFindings: string;
     dimensionFeedback: {
@@ -196,19 +223,66 @@ export interface SupervisionWorkOrder {
     }[];
   };
   tasks: WorkOrderTask[];
-  status: 'pending_student' | 'student_submitted' | 'expert_checked' | 'overdue';
+  status: WorkOrderStatus;
+  teamRejectionReason?: string;
   studentSubmission?: {
     submissionDate: string;
     modificationNotes: string;
     newBpVersion: string;
     newPptVersion: string;
     vcrUpdated?: boolean;
+    taskReplies?: { taskId: string; reply: string }[];
+  };
+  versionDiff?: {
+    beforeBpVersion: string;
+    afterBpVersion: string;
+    beforePptVersion: string;
+    afterPptVersion: string;
+    keyChanges: string[];
+    aiScoreDelta: {
+      totalBefore: number;
+      totalAfter: number;
+      delta: number;
+      dimensionChanges: {
+        dimension: string;
+        before: number;
+        after: number;
+        delta: number;
+        comment: string;
+      }[];
+    };
   };
   expertCheck?: {
     checkedDate: string;
     approved: boolean;
     finalRemark: string;
     scoreChangeDelta: number;
+    reworkInstructions?: string;
+  };
+}
+
+export interface SchoolMentorInvitation {
+  id: string;
+  projectId: string;
+  projectName: string;
+  college: string;
+  track: string;
+  projectSummary: string;
+  invitedDate: string;
+  schoolContact: string;
+  assignedMentors: {
+    name: string;
+    title: string;
+    roleTag: string;
+  }[];
+  status: 'pending' | 'accepted' | 'declined';
+  declineReason?: string;
+  materials?: {
+    bpName: string;
+    pptName: string;
+    teamMembers: string[];
+    aiDiagnosisScore: number;
+    aiKeyWeakness: string[];
   };
 }
 

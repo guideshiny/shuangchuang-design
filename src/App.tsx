@@ -448,6 +448,10 @@ export default function App() {
     setWorkOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
   };
 
+  const handleAddNewWorkOrder = (newOrder: SupervisionWorkOrder) => {
+    setWorkOrders(prev => [newOrder, ...prev]);
+  };
+
   const handleOpenAssignMentor = () => {
     setIsDrawerOpen(false);
     setActiveTab('mentorship');
@@ -619,6 +623,7 @@ export default function App() {
               projects={projects}
               onSelectProject={handleSelectProject}
               onUpdateWorkOrder={handleUpdateWorkOrder}
+              onAddNewWorkOrder={handleAddNewWorkOrder}
             />
           )}
 

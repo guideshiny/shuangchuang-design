@@ -1,4 +1,4 @@
-import { MentorExpert, SupervisionWorkOrder, CohortBatchTask, NotificationAlert } from '../types';
+import { MentorExpert, SupervisionWorkOrder, CohortBatchTask, NotificationAlert, SchoolMentorInvitation } from '../types';
 
 export const MOCK_MENTORS: MentorExpert[] = [
   {
@@ -203,33 +203,98 @@ export const MOCK_MENTORS: MentorExpert[] = [
   },
 ];
 
-export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
+export const MOCK_SCHOOL_INVITATIONS: SchoolMentorInvitation[] = [
   {
-    id: 'order-2026-0819-01',
+    id: 'inv-2026-001',
+    projectId: 'proj-007',
+    projectName: '深蓝视界——水下深海管网智能巡检具身机器人',
+    college: '海洋与深海工程学院',
+    track: '高教主赛道 · 研究生创意组',
+    projectSummary: '针对深海油气管网泄漏巡检的世界性难题，自研耐高压仿生柔性具身推进器与声光融合三维重建算法，已在南海完成3000米水深海试。',
+    invitedDate: '2026-08-28 09:30',
+    schoolContact: '创新创业学院 教学指导处 · 张副处长 (138****9210)',
+    assignedMentors: [
+      { name: '陈建国', title: '长江学者 / 航空制造特聘专家', roleTag: '技术壁垒主审导师' },
+      { name: '温晓琳', title: '全国大赛国赛资深金奖评审', roleTag: '商业模式与路演教练' },
+      { name: '赵振华', title: '深创投投资总监', roleTag: '投融资与财务测算导师' },
+    ],
+    status: 'pending',
+    materials: {
+      bpName: '深蓝视界_创业计划书_初稿_v1.0.pdf',
+      pptName: '深蓝视界_校赛答辩路演PPT.pptx',
+      teamMembers: ['林航(队长/博士)', '沈思齐(机器人控制算法)', '周海燕(流体力学)'],
+      aiDiagnosisScore: 78.5,
+      aiKeyWeakness: ['商业模式缺乏闭环量产测算', '水下防漏油国家标准与认证佐证缺失', '答辩时间超时严重'],
+    },
+  },
+  {
+    id: 'inv-2026-002',
     projectId: 'proj-001',
     projectName: '光子芯眸——新一代全固态硅光激光雷达芯片破壁者',
     college: '电子与信息工程学院',
-    leader: '林子越',
+    track: '高教主赛道 · 师生共创组',
+    projectSummary: '攻克航空发动机微孔加工“卡脖子”技术，飞秒激光重频达80MHz，打标精度达微米级。',
+    invitedDate: '2026-08-22 14:15',
+    schoolContact: '校科创中心赛事部 · 李老师',
+    assignedMentors: [
+      { name: '陈建国', title: '长江学者 / 航空制造特聘专家', roleTag: '核心技术带头导师' },
+      { name: '刘正元', title: '元生创投管理合伙人', roleTag: '商业化与订单教练' },
+    ],
+    status: 'accepted',
+    materials: {
+      bpName: '光子芯眸_商业计划书_v3.0.pdf',
+      pptName: '光子芯眸_PPT_v2.5.pptx',
+      teamMembers: ['周子恒(负责人)', '李慕青(光路设计)', '王天成(嵌入式算法)'],
+      aiDiagnosisScore: 84.0,
+      aiKeyWeakness: ['财务预测需补充批量订货协议', '微孔冷加工极端温漂专利对比不足'],
+    },
+  },
+];
+
+export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
+  {
+    id: 'order-2026-0822-01',
+    projectId: 'proj-001',
+    projectName: '光子芯眸——新一代全固态硅光激光雷达芯片破壁者',
+    college: '电子与信息工程学院',
+    leader: '周子恒 (博士研究生)',
     mentorId: 'mentor-001',
     mentorName: '陈建国',
-    mentorTitle: '国赛金奖资深评委 / 启迪之星硬科技合伙人',
-    sessionDate: '2026-08-25 15:00',
-    sessionType: 'mock_defense',
+    mentorTitle: '长江学者 / 航空制造特聘专家',
+    batchTitle: '国赛金奖冲刺 · 第1轮技术壁垒与财务合规打磨',
+    coMentors: [
+      { name: '陈建国', title: '长江学者 / 航空制造特聘专家', roleTag: '技术壁垒主审导师' },
+      { name: '刘正元', title: '元生创投管理合伙人', roleTag: '产业化与融资导师' },
+    ],
+    sessionDate: '2026-08-27 10:20',
+    sessionType: 'online_meeting',
     audioDurationMinutes: 45,
+    meetingRecord: {
+      title: '腾讯会议：光子芯眸团队第1次技术与商业闭环研讨会',
+      mediaType: 'video',
+      durationText: '45分20秒',
+      uploadTime: '2026-08-27 11:05',
+      summary: '陈导师指出：项目硬核技术过硬，但BP第24页的财务预测数字过于保守且逻辑断层，缺乏先期意向采购订单证据；PPT第8页必须把微孔冷加工极端温漂的第三方检测报告和中航发供应商入库资质矩阵放出来，形成不可辩驳的证据闭环。',
+      transcriptHighlights: [
+        '【08:15 陈建国导师】：你们在超快激光微纳制造这块的数据非常扎实，但是评委一定会问：中航发等头部主机厂到底有没有把你们列入合格供应商名单？',
+        '【19:40 周子恒(队长)】：老师，我们目前已经签署了工业AGV微纳加工先期3000套框架协议，合同原件已盖章，但之前没敢往PPT里放。',
+        '【26:30 陈建国导师】：一定要放！把协议首页和金额页脱敏后直接做成佐证印章！另外把极端工况温漂的对比做成表格，三句话就能封死评委的质疑。',
+      ],
+    },
     diagnosticSummary: {
-      coreFindings: '项目技术极强、流片数据硬核，但在车规认证周期与短期收入预测上存在明显逻辑断层，极易在答辩台被投资型评委猛攻。',
+      coreFindings: '项目科技壁垒极其突出，但商业落地佐证与财务模型曾是致命薄弱项。团队整改极其积极，新版本已补充了详实订单矩阵与中试放大报告。',
       dimensionFeedback: [
-        { dimension: '创新点与技术', expertRemark: '微透镜片上集成与硅光收发阵列自研指标优异，建议在PPT第6页增加与海外博通芯片的对比柱状图。', level: 'good' },
-        { dimension: '商业模式与财务', expertRemark: '财务预测过于激进，车规认证一般需18-24个月，第一年无法产生乘用车订单，需明确过渡期收入来源。', level: 'poor' },
-        { dimension: '团队协作与答辩', expertRemark: '答辩主讲人语速过快，在回答“代工厂产能排期风险”时需更加沉稳，给出备用晶圆厂方案。', level: 'average' },
+        { dimension: '教育与科技维度', expertRemark: '师生共创成果转化链条完整，学生第一发明人专利比例高，答辩时气场自信沉稳。', level: 'good' },
+        { dimension: '产业价值与商业模式', expertRemark: '原先缺少工业大客户背书，现已补充中航发下属配套厂采购意向函与3000套框架协议，证据链已闭环。', level: 'good' },
+        { dimension: '答辩准备与材料说服力', expertRemark: 'PPT第8页冷热加工温漂矩阵清晰直观，有效化解了工程化可靠性质疑。', level: 'good' },
       ],
     },
     tasks: [
       {
         id: 't-101',
         category: '商业模式',
-        title: '重构财务预测：平滑车规认证期现金流',
-        description: '在BP第24页与PPT第16页，补充针对低速无人车、矿卡与工业AGV的先期落地供货计划，解释前18个月的过渡期现金流。',
+        title: '补充工业AGV微纳加工先期订单与采购框架协议',
+        description: '在商业计划书“市场落地与合同证据”章节，补充中航发下属配套厂已签署的3000套先期供货框架协议及脱敏证明。',
         priority: 'high',
         completed: true,
         dueDays: 3,
@@ -237,35 +302,56 @@ export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
       {
         id: 't-102',
         category: '材料/PPT',
-        title: '新增《核心专利防御矩阵与流片实测证明》页',
-        description: '将2项核心发明专利证书原件扫描件及中科院半导体所第三方检测报告浓缩为PPT第8页佐证图。',
+        title: 'PPT第8页嵌入极端工况温漂与专利对比矩阵',
+        description: '将第三方国家光电子计量检测机构报告、温漂实测折线图与竞品对比表浓缩为一页击穿论据。',
         priority: 'high',
         completed: true,
         dueDays: 3,
       },
       {
         id: 't-103',
-        category: '创新点',
-        title: '提炼1分钟答辩杀手锏话术',
-        description: '重点演练“如何用三句话回应评委关于极端工况温漂质疑”的话术脚本。',
+        category: '团队',
+        title: '演练面对评委“量产良品率”极限追问的话术三步法',
+        description: '录制60秒实测音视频，演练“承认现有痛点-亮出核心专利算法-给出实测99.2%良率数据”标准作答。',
         priority: 'medium',
         completed: true,
         dueDays: 5,
       },
     ],
-    status: 'expert_checked',
+    status: 'team_submitted', // 状态4：项目团队修改完毕已推送，待导师验收
     studentSubmission: {
-      submissionDate: '2026-08-27 10:20',
-      modificationNotes: '已按照陈老师指导，全面调整BP第24页财务预测表，新增工业AGV先期3000套供货订单；PPT第8页已嵌入检测报告与专利对比矩阵；录制了1分钟杀手锏问答演练音频。',
-      newBpVersion: '光子芯眸_商业计划书_v4.2.pdf',
-      newPptVersion: '光子芯眸_国赛路演PPT_10min_v3.8.pptx',
+      submissionDate: '2026-08-28 09:15',
+      modificationNotes: '陈老师好！我们团队已全员连夜逐项攻坚落实：\n1. BP第24页全面更新财务预测表，附上3000套工业AGV供货协议扫描件；\n2. PPT第8页重构为冷加工温漂击穿对比页；\n3. 队长周子恒已完成1分钟极限答辩音视频录制并附在附件中，请老师验收指导！',
+      newBpVersion: '光子芯眸_商业计划书_国赛冲刺版_v4.2.pdf',
+      newPptVersion: '光子芯眸_国赛路演PPT_10min精讲_v3.8.pptx',
       vcrUpdated: true,
+      taskReplies: [
+        { taskId: 't-101', reply: '已在BP第24-26页插入框架协议脱敏件，测算年增毛利620万元。' },
+        { taskId: 't-102', reply: 'PPT第8页已重构，左右并列展示竞品热影响区50μm vs 自研0.8μm。' },
+        { taskId: 't-103', reply: '已在模拟答辩舱演练过三次，平均回答耗时48秒，得分92分。' },
+      ],
     },
-    expertCheck: {
-      checkedDate: '2026-08-27 14:00',
-      approved: true,
-      finalRemark: '修改非常到位！财务逻辑已严丝合缝，专利佐证直观有力，项目金奖竞争力显著提升！',
-      scoreChangeDelta: 2.5,
+    versionDiff: {
+      beforeBpVersion: '光子芯眸_商业计划书_v3.0.pdf',
+      afterBpVersion: '光子芯眸_商业计划书_国赛冲刺版_v4.2.pdf',
+      beforePptVersion: '光子芯眸_PPT_v2.5.pptx',
+      afterPptVersion: '光子芯眸_国赛路演PPT_10min精讲_v3.8.pptx',
+      keyChanges: [
+        '【财务与订单】新增中航发及工业AGV 3000套采购意向协议，量化财务模型可行度大幅拉升；',
+        '【竞品与壁垒】PPT第8页由原来纯文字描述，升级为“热透镜效应抑制比+温漂折线图”图表证据链；',
+        '【答辩逻辑】提炼了应对“高校课题组能否规模化量产”的杀手锏三步回应话术。',
+      ],
+      aiScoreDelta: {
+        totalBefore: 81.5,
+        totalAfter: 88.5,
+        delta: 7.0,
+        dimensionChanges: [
+          { dimension: '商业模式与财务可行性', before: 72.0, after: 84.5, delta: 12.5, comment: '订单协议落地直接破解商业性虚浮痛点，提升显著。' },
+          { dimension: '技术壁垒与科技创新', before: 88.0, after: 92.0, delta: 4.0, comment: '检测报告与微纳加工温漂数据形成强力佐证。' },
+          { dimension: '路演表现与材料视觉', before: 79.5, after: 85.0, delta: 5.5, comment: 'PPT前8页逻辑动线更加紧凑，反驳证据醒目。' },
+          { dimension: '团队协作与学生贡献', before: 86.5, after: 89.0, delta: 2.5, comment: '答辩演练展示了学生骨干的担当。' },
+        ],
+      },
     },
   },
   {
@@ -273,27 +359,43 @@ export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
     projectId: 'proj-003',
     projectName: '心影智鉴——多模态心血管影像AI早筛与术中全息导航系统',
     college: '生物医学工程学院 & 附属第一医院',
-    leader: '韩雨蒙',
-    mentorId: 'mentor-003',
-    mentorName: '刘正元',
-    mentorTitle: '元生创投管理合伙人',
-    sessionDate: '2026-08-24 16:30',
+    leader: '韩雨蒙 (博士在读)',
+    mentorId: 'mentor-001',
+    mentorName: '陈建国',
+    mentorTitle: '长江学者 / 航空制造特聘专家',
+    batchTitle: '省赛复赛打磨 · 会议录音AI智能提炼整改工单',
+    coMentors: [
+      { name: '陈建国', title: '长江学者', roleTag: '全真模拟答辩评委' },
+      { name: '刘正元', title: '元生创投管理合伙人', roleTag: '医疗器械投融资导师' },
+    ],
+    sessionDate: '2026-08-28 14:30',
     sessionType: 'online_meeting',
-    audioDurationMinutes: 50,
+    audioDurationMinutes: 38,
+    meetingRecord: {
+      title: '会议录音：心影智鉴团队关于医院进院物价与临床双盲汇报.m4a',
+      mediaType: 'audio',
+      durationText: '38分15秒',
+      uploadTime: '2026-08-28 15:40',
+      summary: '刘正元专家强调：心血管算法模型已经很漂亮，但在国家三类医疗器械注册证下发前，医院无法通过医保收费，你们目前的盈利测算全部假定进院即收费是致命硬伤！必须改成“科研合作费+硬件工作站入驻”的过渡期合规商业闭环。',
+      transcriptHighlights: [
+        '【12:20 刘正元导师】：国内三类器械获批至少24个月，你们在BP里算今年营收3000万，评委一眼就能看出破绽！',
+        '【18:45 韩雨蒙(队长)】：老师，我们第一批已经在协和、华西以科研经费形式装机了5台，每台支付了80万技术服务费。',
+        '【24:10 陈建国导师】：那就要立刻把这5家顶级三甲医院的科研服务采购合同整理出来，改成“科研服务先行+后期耗材分成”模式，这样商业逻辑完全说得通！',
+      ],
+    },
     diagnosticSummary: {
-      coreFindings: '临床双盲数据过硬，但在进院收费物价编码与医院采购流程上缺乏实操说明，投资人评委容易认为商业化落地困难。',
+      coreFindings: '临床双盲数据过硬，但在进院收费物价编码与医院采购流程上存在商业逻辑硬伤。',
       dimensionFeedback: [
         { dimension: '项目创新', expertRemark: '心血管术中15ms低延时全息渲染是杀手锏，要作为核心亮点放在PPT前3页。', level: 'good' },
-        { dimension: '产业价值', expertRemark: '医保甲类物价立项耗时长，需补充“设备租赁+科研专项耗材”的过渡期合规收费方案。', level: 'poor' },
-        { dimension: '人才培养', expertRemark: '医工交叉联合培养故事生动，但需强化学生在算法模型开发中的独立贡献证明。', level: 'average' },
+        { dimension: '产业价值', expertRemark: '医保物价立项耗时长，需补充“设备租赁+科研专项耗材”的过渡期合规收费方案。', level: 'poor' },
       ],
     },
     tasks: [
       {
         id: 't-201',
         category: '商业模式',
-        title: '补充医院进院收费与物价立项全景图',
-        description: '在BP中增加《全国心血管AI影像收费物价试点省份分析》，明确软件与硬件工作站捆绑入院路径。',
+        title: '重构过渡期进院合规商业模式：科研服务采购替代直接医保收费',
+        description: '在BP第16页替换原先的纯医保收费测算，详细阐明三类证下发前5家头部三甲医院科研服务费商业闭环。',
         priority: 'high',
         completed: false,
         dueDays: 2,
@@ -301,14 +403,23 @@ export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
       {
         id: 't-202',
         category: '材料/PPT',
-        title: 'PPT前3页逻辑动线重构',
-        description: '首屏直接展示医生术中戴AR眼镜全息操作震撼画面，3秒抓住评委眼球。',
+        title: 'PPT前3页逻辑动线重构：3秒直击全息AR术中震撼画面',
+        description: '首屏直接展示主刀医生术中佩戴AR全息眼镜精准剥离病灶的抓眼镜头，替代千篇一律的行业背景介绍。',
         priority: 'medium',
-        completed: true,
+        completed: false,
+        dueDays: 3,
+      },
+      {
+        id: 't-203',
+        category: '财务与数据',
+        title: '重新核定未来3年现金流安全垫与研发烧钱速度（Burn Rate）',
+        description: '剥离未落地的乐观预期，真实展现已有高校转化基金与天使轮融资对未来18个月研发的支撑力。',
+        priority: 'medium',
+        completed: false,
         dueDays: 4,
       },
     ],
-    status: 'pending_student',
+    status: 'draft_ai_suggested', // 状态1：AI建议工单草稿，导师确认后推送给团队
   },
   {
     id: 'order-2026-0821-03',
@@ -319,9 +430,25 @@ export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
     mentorId: 'mentor-002',
     mentorName: '温晓琳',
     mentorTitle: '全国红旅赛道评审专家组长',
+    batchTitle: '红旅专项 · 农户造血机制与经济模型测算工单',
+    coMentors: [
+      { name: '温晓琳', title: '全国红旅专家组长', roleTag: '红旅育人与政策顾问' },
+      { name: '陈建国', title: '特聘评审专家', roleTag: '技术转化导师' },
+    ],
     sessionDate: '2026-08-26 10:00',
     sessionType: 'online_meeting',
     audioDurationMinutes: 40,
+    meetingRecord: {
+      title: '腾讯会议：菌草金粮红旅助农答辩攻关辅导会',
+      mediaType: 'video',
+      durationText: '40分钟',
+      uploadTime: '2026-08-26 11:20',
+      summary: '红旅育人情怀非常饱满，农户增收台账详实，目前重点是把重金属饲料检测指标和合作社自主盈利测算做成1页精炼证据链。',
+      transcriptHighlights: [
+        '【15:00 温晓琳导师】：红旅赛道最忌讳的是“学生一走，项目就黄”。你们必须算清楚脱离高校补贴后合作社能不能自负盈亏。',
+        '【25:30 苏锦程(队长)】：新疆喀什合作社今年单靠微藻饲料销售已经实现毛利18万元，已能给每户农户分红3200元。',
+      ],
+    },
     diagnosticSummary: {
       coreFindings: '红旅育人情怀非常饱满，农户增收台账详实，目前重点是把重金属饲料检测指标和合作社自主盈利测算做成1页精炼证据链。',
       dimensionFeedback: [
@@ -336,7 +463,7 @@ export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
         title: '补充合作社无补贴自主盈利经济模型',
         description: '以新疆喀什示范基地为例，测算每亩盐碱地投入微藻菌种成本与出产高蛋白饲料销售毛利。',
         priority: 'high',
-        completed: true,
+        completed: false,
         dueDays: 3,
       },
       {
@@ -345,17 +472,51 @@ export const MOCK_SUPERVISION_ORDERS: SupervisionWorkOrder[] = [
         title: '精简路演VCR：突出农户笑脸与实测数据对比',
         description: 'VCR前30秒直击盐碱地白茫茫一片到如今绿油油长势的强烈视觉反差。',
         priority: 'medium',
-        completed: true,
+        completed: false,
         dueDays: 5,
       },
     ],
-    status: 'student_submitted',
-    studentSubmission: {
-      submissionDate: '2026-08-27 16:45',
-      modificationNotes: '已完成喀什合作社单亩盈利测算表，并重新剪辑了90秒VCR短片，突出盐碱地改良对比镜头。',
-      newBpVersion: '菌草金粮_红旅创业计划书_v5.0.pdf',
-      newPptVersion: '菌草金粮_国赛路演PPT_10min.pptx',
-      vcrUpdated: true,
+    status: 'team_in_progress', // 状态3：团队已接单修改中
+  },
+  {
+    id: 'order-2026-0818-04',
+    projectId: 'proj-004',
+    projectName: '青禾微智——基于多光谱边缘计算的农业病虫害早期预警机',
+    college: '信息科学与工程学院',
+    leader: '宋子豪',
+    mentorId: 'mentor-001',
+    mentorName: '陈建国',
+    mentorTitle: '长江学者 / 航空制造特聘专家',
+    batchTitle: '校赛选拔前辅导 · 多光谱边缘硬件测温标定工单',
+    coMentors: [
+      { name: '陈建国', title: '长江学者', roleTag: '嵌入式技术与架构主审' },
+    ],
+    sessionDate: '2026-08-18 15:00',
+    sessionType: 'offline_coaching',
+    audioDurationMinutes: 30,
+    diagnosticSummary: {
+      coreFindings: '早期多光谱算法已达标，补充了农田实际环境强光干扰下的误报率实测数据，已完全达到合格标准。',
+      dimensionFeedback: [
+        { dimension: '科技维度', expertRemark: '边缘算力部署轻巧，成本控制优秀。', level: 'good' },
+      ],
+    },
+    tasks: [
+      {
+        id: 't-401',
+        category: '创新点',
+        title: '提供农田多光照环境野外实测测试集与误报率报告',
+        description: '在BP附录中加入农业农村部重点实验室野外对比检测数据。',
+        priority: 'high',
+        completed: true,
+        dueDays: 2,
+      },
+    ],
+    status: 'closed_completed', // 状态5：已结项归档
+    expertCheck: {
+      checkedDate: '2026-08-20 18:30',
+      approved: true,
+      finalRemark: '野外测试数据完整，商业模式真实可行，同意结题归档并推荐代表学院参加省赛选拔。',
+      scoreChangeDelta: 3.0,
     },
   },
 ];
@@ -444,3 +605,4 @@ export const mockMentors = MOCK_MENTORS;
 export const mockWorkOrders = MOCK_SUPERVISION_ORDERS;
 export const mockCohortTasks = MOCK_COHORT_TASKS;
 export const mockAlerts = MOCK_ALERTS;
+export const mockSchoolInvitations = MOCK_SCHOOL_INVITATIONS;
