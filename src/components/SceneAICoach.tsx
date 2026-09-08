@@ -25,6 +25,7 @@ import DeepCallExecutionModal from './DeepCallExecutionModal';
 import AtomicCallCard from './AtomicCallCard';
 import DeepCallConfigCard from './DeepCallConfigCard';
 import DeepCallResultCard from './DeepCallResultCard';
+import SessionGuidePage from './SessionGuidePage';
 import { ProjectSpace, ChatMessage, CoachSession, ReActProcess, DataFlowLog, AssociatedFileItem } from '../types';
 import { mockSessionHistories } from '../data/mockSessionMessages';
 
@@ -98,6 +99,8 @@ interface SceneAICoachProps {
   onToggleRightWorkspace?: () => void;
   onSetRightWorkspaceOpen?: (open: boolean) => void;
   onOpenFileInRightWorkspace?: (file: AssociatedFileItem) => void;
+  isNewChatMode?: boolean;
+  onStartSessionFromGuide?: (prompt: string, initialMessages?: ChatMessage[]) => string;
 }
 
 export default function SceneAICoach({ 
@@ -116,7 +119,9 @@ export default function SceneAICoach({
   isRightWorkspaceOpen,
   onToggleRightWorkspace,
   onSetRightWorkspaceOpen,
-  onOpenFileInRightWorkspace
+  onOpenFileInRightWorkspace,
+  isNewChatMode = false,
+  onStartSessionFromGuide
 }: SceneAICoachProps) {
   // 1. Core State
   const [selectedUniversity, setSelectedUniversity] = useState<UniversityOption>(mockUniversities[0]); // Default XMU
@@ -136,13 +141,13 @@ export default function SceneAICoach({
   const [inputValue, setInputValue] = useState<string>('');
   const [isThinking, setIsThinking] = useState<boolean>(false);
 
-  // Expert Agent, Skills, MCP states
-  const [selectedAgentId, setSelectedAgentId] = useState<'diagnosis' | 'defense' | 'policy' | 'intel' | 'campus'>('policy');
+  // Expert Agent, Skills, MCP states (matches design specs: 🎙️ 路演答辩与模拟专家, 8 Skills, 5 MCP Connectors)
+  const [selectedAgentId, setSelectedAgentId] = useState<'diagnosis' | 'defense' | 'policy' | 'intel' | 'campus'>('defense');
   const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>(
-    COACH_SKILLS.filter(s => s.defaultActive).map(s => s.id)
+    COACH_SKILLS.map(s => s.id)
   );
   const [selectedMcpIds, setSelectedMcpIds] = useState<string[]>(
-    MCP_CONNECTORS.filter(m => m.defaultActive).map(m => m.id)
+    MCP_CONNECTORS.map(m => m.id)
   );
 
   const handleToggleSkill = (skillId: string) => {
@@ -353,6 +358,14 @@ export default function SceneAICoach({
 
   // Switch session messages when activeSessionId or activeSpace changes
   useEffect(() => {
+    if (isNewChatMode) {
+      setMessages([]);
+      clearLiveTimers();
+      setLiveReAct(null);
+      setIsThinking(false);
+      return;
+    }
+
     if (!activeSessionId) return;
     currentLoadedSessionIdRef.current = activeSessionId;
     clearLiveTimers();
@@ -365,6 +378,9 @@ export default function SceneAICoach({
       const hist = mockSessionHistories[activeSessionId];
       setMessages(hist);
       setSessionHistoryMap(prev => ({ ...prev, [activeSessionId]: hist }));
+    } else {
+      // New or unseeded session: start with empty messages to trigger the SessionGuidePage
+      setMessages([]);
     }
 
     // 根据当前会话的 taskKey 或标题，自适应匹配当前子智能体专家 (主智能体技能与连接器由用户自主独立配置，不再强制关联)
@@ -386,46 +402,7 @@ export default function SceneAICoach({
     } else if (tKey === 'task-4' || tTitle.includes('校内') || tTitle.includes('校本') || tTitle.includes('智库') || tTitle.includes('报销')) {
       setSelectedAgentId('campus');
     }
-
-    if (!sessionHistoryMap[activeSessionId]?.length && !mockSessionHistories[activeSessionId]?.length) {
-      // New or unseeded session: initialize with bespoke greeting for this space
-      const isNoSpace = activeSpaceId === 'none' || !activeSpace;
-      const spaceName = isNoSpace ? '' : activeSpace.name;
-      const sessTitle = currentSession?.title || '新备赛咨询会话';
-      const defaultNewSessionMsgs: ChatMessage[] = [
-        {
-          id: `intro-${activeSessionId}`,
-          sender: 'coach',
-          type: 'intro_scenarios',
-          text: isNoSpace
-            ? `同学你好！我是你的 AI 备赛教练，当前会话为独立咨询模式（无工作空间）。\n\n赛事政策库与双创知识库已就绪，你可以随时向我提问或点击下方卡片开启深度辅导，也可以在输入框随时挂载项目工作空间！`
-            : `同学你好！已为你开启「${spaceName}」的会话：**${sessTitle}**。\n\n我是你的 AI 备赛教练，当前工作空间（${activeSpace?.workspace?.localPath || '本地与云端'}）与赛事知识库已就绪，随时向我提问或点击下方卡片开启深度辅导！`,
-          timestamp: '刚刚',
-          data: {
-            scenarios: mockScenarioCards
-          }
-        },
-        {
-          id: `stage-ask-${activeSessionId}`,
-          sender: 'coach',
-          type: 'stage_prompt',
-          text: isNoSpace
-            ? `在开始前，请选择你当前关注或准备推进的备赛阶段：`
-            : `在开始前，请确认你的项目「${spaceName}」当前所处的备赛阶段：`,
-          timestamp: '刚刚',
-          data: {
-            stages: mockStages,
-            currentStage: currentStage
-          }
-        }
-      ];
-      setMessages(defaultNewSessionMsgs);
-      setSessionHistoryMap(prev => ({
-        ...prev,
-        [activeSessionId]: defaultNewSessionMsgs
-      }));
-    }
-  }, [activeSessionId, activeSpace?.id, activeSpaceId]);
+  }, [activeSessionId, activeSpace?.id, activeSpaceId, isNewChatMode]);
 
   // Keep session history synchronized whenever messages change in the active session
   useEffect(() => {
@@ -1669,11 +1646,22 @@ export default function SceneAICoach({
       mentionedFiles: currentMentions.length > 0 ? currentMentions : undefined,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-    setMessages(prev => [...prev, userMsg]);
+
+    let targetSessionId = activeSessionId;
+    if (isNewChatMode && onStartSessionFromGuide) {
+      targetSessionId = onStartSessionFromGuide(query, [userMsg]);
+      currentLoadedSessionIdRef.current = targetSessionId;
+      setSessionHistoryMap(prev => ({
+        ...prev,
+        [targetSessionId]: [userMsg]
+      }));
+    }
+
+    setMessages([userMsg]);
     setMentionedFiles([]);
     setIsThinking(true);
 
-    if (onUpdateSessionTitle && currentSession && (currentSession.title.includes('新会话') || currentSession.title.includes('初始'))) {
+    if (onUpdateSessionTitle && currentSession && !isNewChatMode && (currentSession.title.includes('新会话') || currentSession.title.includes('初始'))) {
       const cleanTitle = query.length > 18 ? query.slice(0, 18) + '...' : query;
       onUpdateSessionTitle(activeSpaceId || 'none', activeSessionId, cleanTitle);
     }
@@ -1926,41 +1914,42 @@ export default function SceneAICoach({
       <div className="flex-1 flex flex-col min-w-0 bg-[#FBFBFC] relative h-full">
         {/* Main Workspace Area: Fixed Layout with Upper Scrollable Viewport and Bottom-Docked Input Bar */}
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-          {/* Scrollable Message / Greeting Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6 flex justify-center">
-            {messages.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-8 max-w-4xl mx-auto w-full text-center my-auto">
-                {/* Mascot Greeting */}
-                <div className="mb-3">
-                  <AiMascot size={72} showSpeaker={true} className="hover:scale-105 transition-transform" />
-                </div>
-
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-                  开启新的备赛辅导会话
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-500 max-w-lg mt-1.5 leading-relaxed">
-                  向 AI 备赛助手提问，或点击下方推荐任务与快捷功能发起冲刺咨询
-                </p>
-
-                {/* Quick Badges Row */}
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-4 mb-2 text-xs font-mono">
-                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                    <span className="text-blue-500">🤖</span>
-                    <span>智能体: {selectedAgentId === 'diagnosis' ? '诊断与指导专家' : '答辩专家'}</span>
-                  </div>
-                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                    <span className="text-indigo-500">⚡</span>
-                    <span>技能: {selectedSkillIds.length} 项启用</span>
-                  </div>
-                  <div className="px-3 py-1 rounded-full bg-white border border-gray-200 text-gray-700 shadow-2xs flex items-center space-x-1.5">
-                    <span className="text-emerald-500">🔌</span>
-                    <span>MCP: {selectedMcpIds.length} 个连接</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full max-w-4xl space-y-6">
-                {messages.map((msg) => {
+          {isNewChatMode || messages.length === 0 ? (
+            /* ======================================================== */
+            /* 1. 【会话引导页面】 (Standalone Guidance Page, Centered)      */
+            /* ======================================================== */
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center justify-center">
+              <SessionGuidePage
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+                onSend={handleSendMessage}
+                isThinking={isThinking}
+                selectedAgentId={selectedAgentId}
+                onSelectAgent={setSelectedAgentId}
+                selectedSkillIds={selectedSkillIds}
+                onToggleSkill={handleToggleSkill}
+                selectedMcpIds={selectedMcpIds}
+                onToggleMcp={handleToggleMcp}
+                onOpenFlywheelModal={() => setShowFlywheelModal(true)}
+                availableFiles={sharedFiles}
+                mentionedFiles={mentionedFiles}
+                onAddMentionFile={handleAddMentionFile}
+                onRemoveMentionFile={handleRemoveMentionFile}
+                spaces={spaces}
+                activeSpace={activeSpace}
+                activeSpaceId={activeSpaceId || (activeSpace?.id || 'none')}
+                onSelectSpace={onSelectSpace}
+              />
+            </div>
+          ) : (
+            /* ======================================================== */
+            /* 2. 【会话历史】 (Conversation History + Bottom Docked Input) */
+            /* ======================================================== */
+            <>
+              {/* Scrollable Message / History Area */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6 flex justify-center">
+                <div className="w-full max-w-4xl space-y-6">
+                  {messages.map((msg) => {
             const isCoach = msg.sender === 'coach';
             const isStudent = msg.sender === 'student';
             const isSystem = msg.sender === 'system';
@@ -2792,52 +2781,53 @@ export default function SceneAICoach({
 
                 <div ref={messagesEndRef} />
               </div>
-            )}
-          </div>
-
-          {/* Bottom Docked ChatComposer: Permanently fixed to the bottom */}
-          <div className="sticky bottom-0 px-4 sm:px-6 py-3 sm:py-4 bg-[#FBFBFC] flex-shrink-0 flex justify-center border-0 border-none z-0">
-            <div className="w-full max-w-4xl">
-              {autoPromptHint && (
-                <div className="mb-2.5 flex items-center justify-between px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 text-blue-950 text-xs shadow-2xs">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <Sparkles className="h-3.5 w-3.5 text-blue-600 animate-pulse flex-shrink-0" />
-                    <span className="font-medium truncate">{autoPromptHint}</span>
-                  </div>
-                  <button
-                    onClick={() => setAutoPromptHint(null)}
-                    className="text-blue-600 hover:text-blue-900 text-[10px] font-mono ml-2 underline flex-shrink-0"
-                  >
-                    关闭提示
-                  </button>
-                </div>
-              )}
-
-              <ChatComposer
-                inputValue={inputValue}
-                setInputValue={setInputValue}
-                onSend={handleSendMessage}
-                isThinking={isThinking}
-                spaces={spaces}
-                activeSpace={activeSpace}
-                activeSpaceId={activeSpaceId || (activeSpace?.id || 'none')}
-                onSelectSpace={onSelectSpace || (() => {})}
-                onCreateSpace={onCreateSpace || (() => {})}
-                selectedAgentId={selectedAgentId}
-                onSelectAgent={setSelectedAgentId}
-                selectedSkillIds={selectedSkillIds}
-                onToggleSkill={handleToggleSkill}
-                selectedMcpIds={selectedMcpIds}
-                onToggleMcp={handleToggleMcp}
-                onOpenFlywheelModal={() => setShowFlywheelModal(true)}
-                isNewSessionMode={messages.length === 0}
-                availableFiles={sharedFiles}
-                mentionedFiles={mentionedFiles}
-                onAddMentionFile={handleAddMentionFile}
-                onRemoveMentionFile={handleRemoveMentionFile}
-              />
             </div>
-          </div>
+
+            {/* Bottom Docked ChatComposer: Displayed ONLY in Conversation History view */}
+            <div className="sticky bottom-0 px-4 sm:px-6 py-3 sm:py-4 bg-[#FBFBFC] flex-shrink-0 flex justify-center border-t border-slate-100/80 z-10">
+              <div className="w-full max-w-4xl">
+                {autoPromptHint && (
+                  <div className="mb-2.5 flex items-center justify-between px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 border border-blue-200 text-blue-950 text-xs shadow-2xs">
+                    <div className="flex items-center space-x-2 min-w-0">
+                      <Sparkles className="h-3.5 w-3.5 text-blue-600 animate-pulse flex-shrink-0" />
+                      <span className="font-medium truncate">{autoPromptHint}</span>
+                    </div>
+                    <button
+                      onClick={() => setAutoPromptHint(null)}
+                      className="text-blue-600 hover:text-blue-900 text-[10px] font-mono ml-2 underline flex-shrink-0"
+                    >
+                      关闭提示
+                    </button>
+                  </div>
+                )}
+
+                <ChatComposer
+                  inputValue={inputValue}
+                  setInputValue={setInputValue}
+                  onSend={handleSendMessage}
+                  isThinking={isThinking}
+                  spaces={spaces}
+                  activeSpace={activeSpace}
+                  activeSpaceId={activeSpaceId || (activeSpace?.id || 'none')}
+                  onSelectSpace={onSelectSpace || (() => {})}
+                  onCreateSpace={onCreateSpace || (() => {})}
+                  selectedAgentId={selectedAgentId}
+                  onSelectAgent={setSelectedAgentId}
+                  selectedSkillIds={selectedSkillIds}
+                  onToggleSkill={handleToggleSkill}
+                  selectedMcpIds={selectedMcpIds}
+                  onToggleMcp={handleToggleMcp}
+                  onOpenFlywheelModal={() => setShowFlywheelModal(true)}
+                  isNewSessionMode={false}
+                  availableFiles={sharedFiles}
+                  mentionedFiles={mentionedFiles}
+                  onAddMentionFile={handleAddMentionFile}
+                  onRemoveMentionFile={handleRemoveMentionFile}
+                />
+              </div>
+            </div>
+          </>
+        )}
         </div>
       </div>
 

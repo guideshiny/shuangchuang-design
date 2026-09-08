@@ -57,6 +57,7 @@ export type TabType =
   | 'teams_management'
   | 'my_project'
   | 'coach'
+  | 'new_chat'
   | 'guidance_workbench'
   | 'defense_training';
 
@@ -193,7 +194,7 @@ export default function Sidebar({
         {
           groupName: 'AI伴学与答辩实训',
           items: [
-            { id: 'coach' as TabType, label: '新建对话', icon: MessageSquarePlus },
+            { id: 'new_chat' as TabType, label: '新建对话', icon: MessageSquarePlus },
             { id: 'my_project' as TabType, label: '项目工作台', icon: Target, badge: 'AI对标' },
             { id: 'guidance_workbench' as TabType, label: '全链路指导工作台', icon: Workflow, badge: 'L1~L6', highlight: true },
             { id: 'defense_training' as TabType, label: '模拟评审与答辩训练', icon: Swords, badge: '实训', highlight: false },
@@ -236,7 +237,7 @@ export default function Sidebar({
       {
         groupName: 'AI数智备赛',
         items: [
-          { id: 'coach' as TabType, label: '新建对话', icon: MessageSquarePlus },
+          { id: 'new_chat' as TabType, label: '新建对话', icon: MessageSquarePlus },
         ]
       },
       {
@@ -467,27 +468,6 @@ export default function Sidebar({
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
-                const isNewChatAction = item.id === 'coach';
-
-                if (isNewChatAction) {
-                  return (
-                    <button
-                      key={item.id}
-                      id={`sidebar-tab-${item.id}`}
-                      onClick={() => {
-                        onCreateSession?.();
-                        setActiveTab('coach');
-                      }}
-                      className="w-full flex items-center justify-between px-3 py-2 rounded-xl font-medium transition text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-left"
-                      title="点击新建对话"
-                    >
-                      <div className="flex items-center space-x-2.5 truncate">
-                        <Icon className="h-4 w-4 shrink-0 text-slate-400" />
-                        <span className="truncate">{item.label}</span>
-                      </div>
-                    </button>
-                  );
-                }
 
                 return (
                   <button
@@ -544,11 +524,10 @@ export default function Sidebar({
               </button>
               <button
                 onClick={() => {
-                  onCreateSession?.();
-                  setActiveTab('coach');
+                  setActiveTab('new_chat');
                 }}
                 className="p-1 rounded-md text-slate-400 hover:text-sky-600 hover:bg-slate-100 transition-colors"
-                title="新建会话"
+                title="新建对话"
                 id="btn-create-standalone-session"
               >
                 <Plus className="h-3.5 w-3.5" />

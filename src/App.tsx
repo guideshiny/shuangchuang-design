@@ -331,30 +331,23 @@ export default function App() {
     setActiveTab('coach');
   };
 
-  const handleCreateSession = (spaceId: string) => {
+  const handleStartSessionFromGuide = (prompt: string, initialMessages?: any[]) => {
     const newSessionId = `sess-${Date.now()}`;
+    const cleanTitle = prompt.length > 18 ? prompt.slice(0, 18) + '...' : prompt;
     const newSession: CoachSession = {
       id: newSessionId,
-      title: '新对话咨询会话',
+      title: cleanTitle,
       time: '刚刚',
-      messages: [
-        {
-          id: `msg-${Date.now()}`,
-          sender: 'coach',
-          type: 'text',
-          text: '你好！新的备赛会话已建立。你可以向我发起关于PPT排版、答辩防守、市场测算或商业模式的咨询。',
-          timestamp: '刚刚'
-        }
-      ]
+      messages: initialMessages || []
     };
 
-    if (spaceId === 'none') {
+    if (activeSpaceId === 'none' || !activeSpaceId) {
       setStandaloneSessions(prev => [newSession, ...prev]);
       setActiveSpaceId('none');
       setActiveSessionId(newSessionId);
     } else {
       setSpaces(prev => prev.map(s => {
-        if (s.id === spaceId) {
+        if (s.id === activeSpaceId) {
           return {
             ...s,
             sessions: [newSession, ...s.sessions]
@@ -362,10 +355,17 @@ export default function App() {
         }
         return s;
       }));
-      setActiveSpaceId(spaceId);
       setActiveSessionId(newSessionId);
     }
     setActiveTab('coach');
+    return newSessionId;
+  };
+
+  const handleCreateSession = (spaceId?: string) => {
+    if (spaceId && spaceId !== 'none') {
+      setActiveSpaceId(spaceId);
+    }
+    setActiveTab('new_chat');
   };
 
   const handleDeleteSession = (spaceId: string, sessionId: string) => {
@@ -500,7 +500,7 @@ export default function App() {
 
       {/* Right Column: Clean Top Status Bar & Workspace */}
       <div className={`flex-1 flex flex-col h-full min-w-0 ${
-        ['coach', 'guidance_workbench'].includes(activeTab) 
+        ['coach', 'new_chat', 'guidance_workbench'].includes(activeTab) 
           ? 'overflow-hidden' 
           : 'overflow-y-auto'
       }`}>
@@ -518,20 +518,22 @@ export default function App() {
           isRightWorkspaceOpen={isRightWorkspaceOpen}
           onToggleRightWorkspace={() => setIsRightWorkspaceOpen(prev => !prev)}
           activeSessionTitle={
-            (activeSpaceId === 'none'
-              ? standaloneSessions.find(s => s.id === activeSessionId)?.title
-              : currentActiveSpace?.sessions?.find(s => s.id === activeSessionId)?.title) || '规划场景深度演进路径'
+            activeTab === 'new_chat'
+              ? '新建对话'
+              : (activeSpaceId === 'none'
+                  ? standaloneSessions.find(s => s.id === activeSessionId)?.title
+                  : currentActiveSpace?.sessions?.find(s => s.id === activeSessionId)?.title) || '规划场景深度演进路径'
           }
         />
 
         {/* Main Content Area */}
         <main className={`flex-1 min-w-0 ${
-          ['coach', 'guidance_workbench'].includes(activeTab)
+          ['coach', 'new_chat', 'guidance_workbench'].includes(activeTab)
             ? 'h-[calc(100vh-4rem)] overflow-hidden p-0 space-y-0 flex flex-col'
             : 'p-4 sm:p-6 lg:p-8 space-y-6'
         }`}>
           {/* Shuangchuang-AI Integrated Modules */}
-          {activeTab === 'coach' && (
+          {(activeTab === 'coach' || activeTab === 'new_chat') && (
             <SceneAICoach
               onNavigateToScene={(sceneId) => setActiveTab(sceneId as TabType)}
               activeSpace={currentActiveSpace}
@@ -549,6 +551,8 @@ export default function App() {
               onToggleRightWorkspace={() => setIsRightWorkspaceOpen(prev => !prev)}
               onSetRightWorkspaceOpen={(open) => setIsRightWorkspaceOpen(open)}
               onOpenFileInRightWorkspace={handleOpenFileInRightWorkspace}
+              isNewChatMode={activeTab === 'new_chat'}
+              onStartSessionFromGuide={handleStartSessionFromGuide}
             />
           )}
 
@@ -660,7 +664,7 @@ export default function App() {
         </main>
 
         {/* Global Compact Footer (shown only for regular dashboard tabs) */}
-        {!['coach', 'guidance_workbench'].includes(activeTab) && (
+        {!['coach', 'new_chat', 'guidance_workbench'].includes(activeTab) && (
           <footer className="border-t border-slate-200 bg-white py-2.5 px-6 text-center text-[11px] text-slate-400 shrink-0">
             <span>{session.university ? `${session.university} · ` : ''}2026年中国国际大学生创新大赛 · 双创数智中枢 | 4端协同 · 金牌培育 · 全流程督导闭环</span>
           </footer>

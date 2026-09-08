@@ -45,6 +45,8 @@ interface ChatComposerProps {
   onToggleMcp: (mcpId: string) => void;
   onOpenFlywheelModal?: () => void;
   isNewSessionMode?: boolean;
+  isCenteredMode?: boolean;
+  externalInputRef?: React.RefObject<HTMLTextAreaElement>;
   availableFiles?: AssociatedFileItem[];
   mentionedFiles?: AssociatedFileItem[];
   onAddMentionFile?: (file: AssociatedFileItem) => void;
@@ -63,6 +65,8 @@ export default function ChatComposer({
   selectedMcpIds,
   onToggleMcp,
   onOpenFlywheelModal,
+  isCenteredMode = false,
+  externalInputRef,
   availableFiles = [],
   mentionedFiles = [],
   onAddMentionFile,
@@ -88,9 +92,12 @@ export default function ChatComposer({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // References
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const localInputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = (externalInputRef as React.RefObject<HTMLTextAreaElement>) || localInputRef;
   const composerContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const popoverPosition = isCenteredMode ? 'top-full mt-2.5' : 'bottom-full mb-2.5';
 
   // Current selected expert agent
   const currentAgent = EXPERT_AGENTS.find(a => a.id === selectedAgentId) || EXPERT_AGENTS[0];
@@ -193,9 +200,13 @@ export default function ChatComposer({
       )}
 
       {/* Main Composer Box */}
-      <div className="bg-white border border-gray-200/90 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-3 sm:p-4 text-gray-900 relative">
+      <div className={`bg-white border ${
+        isCenteredMode 
+          ? 'border-slate-200/90 rounded-3xl shadow-sm hover:shadow-md p-4 sm:p-5' 
+          : 'border-gray-200/90 rounded-2xl shadow-sm hover:shadow-md p-3 sm:p-4'
+      } transition-all text-gray-900 relative`}>
         {/* MIDDLE ROW: Attached Files Chips & Textarea Input Area */}
-        <div className="relative min-h-[72px] sm:min-h-[86px]">
+        <div className={`relative ${isCenteredMode ? 'min-h-[80px] sm:min-h-[96px]' : 'min-h-[72px] sm:min-h-[86px]'}`}>
           {/* File Chips (Project files + Local files/images) */}
           {((mentionedFiles && mentionedFiles.length > 0) || localUploadedFiles.length > 0) && (
             <div className="flex flex-wrap items-center gap-1.5 pb-2.5">
@@ -246,12 +257,15 @@ export default function ChatComposer({
 
           <textarea
             ref={inputRef}
-            rows={2}
+            rows={isCenteredMode ? 3 : 2}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="输入内容，输入 @ 可引用项目文件提问，或点击上方推荐任务载入提示词..."
-            className="w-full bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none resize-none leading-relaxed min-h-[64px]"
+            className={`w-full bg-transparent ${
+              isCenteredMode ? 'text-[15px] min-h-[76px]' : 'text-sm min-h-[64px]'
+            } text-gray-900 placeholder-gray-400 focus:outline-none resize-none leading-relaxed`}
+            id="chat-composer-textarea"
           />
         </div>
 
@@ -284,7 +298,7 @@ export default function ChatComposer({
 
               {/* Upload Popup Menu */}
               {isUploadMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2.5 w-64 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-50 p-1.5 space-y-1 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                <div className={`absolute ${popoverPosition} left-0 w-64 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-50 p-1.5 space-y-1 text-slate-800 animate-in fade-in zoom-in-95 duration-150`}>
                   {/* Option 1: 选择项目文件 */}
                   <button
                     type="button"
@@ -351,7 +365,7 @@ export default function ChatComposer({
 
               {/* Expert Agent Popover */}
               {isAgentMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2.5 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2.5 space-y-1.5 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                <div className={`absolute ${popoverPosition} left-0 w-80 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-2.5 space-y-1.5 text-slate-800 animate-in fade-in zoom-in-95 duration-150`}>
                   <div className="text-[11px] font-bold text-slate-400 px-2 py-1 uppercase tracking-wider flex items-center justify-between">
                     <span>专家智能体选择</span>
                     <span className="text-slate-400 font-normal">5位专家在线</span>
@@ -419,7 +433,7 @@ export default function ChatComposer({
 
               {/* Skills Popover */}
               {isSkillMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2.5 w-84 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                <div className={`absolute ${popoverPosition} left-0 w-84 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 text-slate-800 animate-in fade-in zoom-in-95 duration-150`}>
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div className="flex items-center space-x-1.5">
                       <span className="text-amber-500 font-bold text-sm">⚡</span>
@@ -514,7 +528,7 @@ export default function ChatComposer({
 
               {/* MCP Connectors Popover */}
               {isMcpMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2.5 w-84 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 text-slate-800 animate-in fade-in zoom-in-95 duration-150">
+                <div className={`absolute ${popoverPosition} left-0 w-84 sm:w-96 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 p-3 space-y-2 text-slate-800 animate-in fade-in zoom-in-95 duration-150`}>
                   <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                     <div className="flex items-center space-x-1.5">
                       <span className="text-purple-600 font-bold text-sm">🔌</span>

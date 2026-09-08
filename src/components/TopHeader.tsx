@@ -43,6 +43,7 @@ export default function TopHeader({
 
   const tabTitleMap: Record<TabType, { title: string; subtitle: string }> = {
     coach: { title: 'AI备赛助手', subtitle: '多模式智能体对话 · 空间文档互通 · 深度工具链调度' },
+    new_chat: { title: '新建对话', subtitle: '全场景AI备赛智囊 · 商业计划书体检 · 路演答辩模拟 · 政策研读' },
     guidance_workbench: { title: '全链路指导工作台', subtitle: 'L1~L6全阶段智能演进 · 商业计划书12章沉浸打磨 · 多模态材料档案与版本快照' },
     defense_training: { title: '模拟评审与答辩训练', subtitle: '全真模拟答辩 · 评委风格质询 · 六维能力雷达与复盘报告' },
     my_project: { title: '项目工作台', subtitle: 'AI对标得分 · 专家问诊诊断 · 整改工单交付' },
@@ -108,7 +109,7 @@ export default function TopHeader({
       {/* Right Controls: Alerts and Right Workspace Toggle */}
       <div className="flex items-center space-x-2 sm:space-x-3 shrink-0">
         {/* Right Workspace Toggle Button (Mirrors Left Sidebar Toggle) */}
-        {onToggleRightWorkspace && (
+        {onToggleRightWorkspace && activeTab === 'coach' && (
           <button
             type="button"
             id="btn-toggle-right-workspace"
