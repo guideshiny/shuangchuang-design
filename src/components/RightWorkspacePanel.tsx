@@ -22,16 +22,22 @@ import {
   FileText, 
   Video, 
   Paperclip,
-  ZoomIn,
-  ZoomOut,
   Pin,
   Download,
   Eye,
   Sliders,
   Layers,
-  ArrowRight
+  ArrowRight,
+  FileCheck,
+  GitCompare,
+  PlusCircle,
+  MessageSquare,
+  History,
+  XCircle
 } from 'lucide-react';
 import { AssociatedFileItem } from '../types';
+import { ReviewFileItem, FileAnnotation, ReviewDecision } from '../types/reviewTypes';
+import ReviewFileViewer from './review/ReviewFileViewer';
 
 export const ALL_PROJECT_DELIVERABLES: AssociatedFileItem[] = [
   {
@@ -131,6 +137,15 @@ interface RightWorkspacePanelProps {
   isDragging?: boolean;
   isExpandedFull?: boolean;
   onToggleExpandedFull?: () => void;
+  // Review & Annotation features
+  reviewFiles?: ReviewFileItem[];
+  activeReviewIndex?: number;
+  onSelectReviewIndex?: (index: number) => void;
+  onAddAnnotation?: (fileId: string, annotation: { selectedText: string; comment: string; side?: 'old' | 'new' | 'single' }) => void;
+  onRemoveAnnotation?: (fileId: string, annotationId: string) => void;
+  panelMode?: 'review' | 'deliverables';
+  onSetPanelMode?: (mode: 'review' | 'deliverables') => void;
+  onReviewDecision?: (fileId: string, decision: ReviewDecision, comment?: string) => void;
 }
 
 export default function RightWorkspacePanel({
@@ -147,10 +162,70 @@ export default function RightWorkspacePanel({
   widthPercent = 40,
   isDragging = false,
   isExpandedFull: externalIsExpandedFull,
-  onToggleExpandedFull
+  onToggleExpandedFull,
+  reviewFiles = [],
+  activeReviewIndex = 0,
+  onSelectReviewIndex,
+  onAddAnnotation,
+  onRemoveAnnotation,
+  panelMode: externalPanelMode,
+  onSetPanelMode,
+  onReviewDecision
 }: RightWorkspacePanelProps) {
   const [showDeliverablesMenu, setShowDeliverablesMenu] = useState(false);
   const [internalIsExpandedFull, setInternalIsExpandedFull] = useState(false);
+  const [showImproveModal, setShowImproveModal] = useState<boolean>(false);
+  const [improveComment, setImproveComment] = useState<string>('');
+  const [internalPanelMode, setInternalPanelMode] = useState<'review' | 'deliverables'>(
+    (reviewFiles && reviewFiles.length > 0) ? 'review' : 'deliverables'
+  );
+
+  const currentMode = externalPanelMode !== undefined ? externalPanelMode : internalPanelMode;
+  const setMode = (m: 'review' | 'deliverables') => {
+    if (onSetPanelMode) onSetPanelMode(m);
+    setInternalPanelMode(m);
+  };
+
+  const activeReviewFile = reviewFiles.length > 0 ? (reviewFiles[activeReviewIndex] || reviewFiles[0]) : null;
+  const pendingReviewCount = reviewFiles.filter(f => f.status === 'pending').length;
+
+  // 判断当前文件是否属于审核项且需要审批
+  const isReviewFile = currentMode === 'review' && !!activeReviewFile;
+  const isApprovalNeeded = isReviewFile && activeReviewFile.status === 'pending';
+
+  const handleApprove = () => {
+    const file = activeReviewFile || (reviewFiles.length > 0 ? reviewFiles[0] : null);
+    if (file) {
+      if (onReviewDecision) {
+        onReviewDecision(file.id, 'approved');
+      }
+      showToast(`已同意《${file.name}》并合并至项目交付物库`);
+    }
+  };
+
+  const handleReject = () => {
+    const file = activeReviewFile || (reviewFiles.length > 0 ? reviewFiles[0] : null);
+    if (file) {
+      if (onReviewDecision) {
+        onReviewDecision(file.id, 'rejected');
+      }
+      showToast(`已否决《${file.name}》修改方案，保留原基准版本`);
+    }
+  };
+
+  const handleImproveSubmit = () => {
+    const file = activeReviewFile || (reviewFiles.length > 0 ? reviewFiles[0] : null);
+    const comment = improveComment.trim();
+    if (!comment) return;
+    if (file) {
+      if (onReviewDecision) {
+        onReviewDecision(file.id, 'improved', comment);
+      }
+      showToast(`已提交对《${file.name}》的改进意见`);
+    }
+    setShowImproveModal(false);
+    setImproveComment('');
+  };
   
   // Controlled or uncontrolled support for expanded full state
   const isExpandedFull = externalIsExpandedFull !== undefined ? externalIsExpandedFull : internalIsExpandedFull;
@@ -166,6 +241,13 @@ export default function RightWorkspacePanel({
   const [zoomLevel, setZoomLevel] = useState(48); // default 48% matching screenshot
   const [activeSheetTab, setActiveSheetTab] = useState<'roadmap' | 'budget' | 'kpi'>('roadmap');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Old version visibility toggle (default closed: false)
+  const [showOldVersion, setShowOldVersion] = useState<boolean>(false);
+  // Saved annotations drawer toggle (default closed: false)
+  const [showAnnotations, setShowAnnotations] = useState<boolean>(false);
+  // Change declaration panel toggle (default open: true)
+  const [showChangeDeclaration, setShowChangeDeclaration] = useState<boolean>(true);
 
   // Listen for ESC key to exit in-page fullscreen
   useEffect(() => {
@@ -205,6 +287,18 @@ export default function RightWorkspacePanel({
     }
   };
 
+  const currentFileName = currentMode === 'review' && activeReviewFile
+    ? activeReviewFile.name
+    : (activeFile?.name || '产物文件');
+
+  const currentFileBadge = currentMode === 'review' && activeReviewFile
+    ? (activeReviewFile.changeType === 'modify' ? '修改' : '新增')
+    : null;
+
+  const currentAnnotationsCount = currentMode === 'review' && activeReviewFile
+    ? activeReviewFile.annotations.length
+    : 0;
+
   if (!isOpen) return null;
 
   return (
@@ -239,89 +333,247 @@ export default function RightWorkspacePanel({
       )}
 
       {/* ----------------------------------------------------------------- */}
-      {/* 1. TOP TAB BAR: Multi-file tabs like browser/IDE                  */}
+      {/* 1. SINGLE MERGED HEADER: 产物清单 + 旧版本开关 + 已存批注 + 窗口操作 */}
       {/* ----------------------------------------------------------------- */}
-      <div className="h-10 bg-slate-100/90 border-b border-slate-200 px-2 flex items-center justify-between shrink-0">
-        {/* Scrollable Tabs List */}
-        <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar min-w-0 flex-1 pr-2 py-1">
-          {openTabs.map((tabId) => {
-            const file = allFiles.find(f => f.id === tabId);
-            if (!file) return null;
-            const isActive = file.id === activeFile?.id;
-            return (
-              <div
-                key={file.id}
-                onClick={() => onSelectFile(file.id)}
-                className={`group flex items-center space-x-1.5 px-3 py-1.5 rounded-t-lg text-xs font-medium cursor-pointer transition-all shrink-0 max-w-[200px] border-t-2 ${
-                  isActive
-                    ? 'bg-white text-slate-900 shadow-2xs border-sky-600 border-x border-slate-200'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border-transparent'
-                }`}
-                title={file.name}
-              >
-                {getFileIcon(file.type)}
-                <span className="truncate">{file.name}</span>
-                {openTabs.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCloseTab(file.id);
-                    }}
-                    className="p-0.5 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-700 opacity-70 group-hover:opacity-100 transition-opacity ml-1"
-                    title="关闭标签页"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+      <div className="h-11 bg-white border-b border-slate-200 px-3 flex items-center justify-between shrink-0 select-none relative z-30">
+        <div className="flex items-center space-x-2 min-w-0">
+          {/* 产物清单 Dropdown Button (保留“产物清单”，增加标识，“修改”和“新增”，两者都没有的不标识) */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowDeliverablesMenu(prev => !prev)}
+              className="inline-flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200/80 text-slate-800 border border-slate-200 transition-colors cursor-pointer"
+              title="查看与切换产物清单"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+              <span>产物清单</span>
+              {currentFileBadge && (
+                <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                  currentFileBadge === '修改' 
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                    : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                }`}>
+                  {currentFileBadge}
+                </span>
+              )}
+              <span className="text-slate-500 font-normal max-w-[130px] sm:max-w-[180px] md:max-w-[220px] truncate hidden sm:inline">
+                ({currentFileName})
+              </span>
+              <ChevronDown className={`h-3 w-3 text-slate-400 transition-transform ${showDeliverablesMenu ? 'rotate-180' : ''}`} />
+            </button>
 
-          {/* Add Tab Button */}
-          <button
-            type="button"
-            onClick={() => setShowDeliverablesMenu(prev => !prev)}
-            className="h-7 w-7 rounded-lg hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors shrink-0"
-            title="添加或打开产物文件"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
+            {/* Deliverables Dropdown Menu */}
+            {showDeliverablesMenu && (
+              <div 
+                className="absolute left-0 top-10 w-80 bg-white rounded-xl border border-slate-200 shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-1 duration-150"
+              >
+                <div className="px-2.5 py-1.5 mb-1 border-b border-slate-100 text-xs font-bold text-slate-700 flex items-center justify-between">
+                  <span>产物清单目录</span>
+                  <span className="text-[10px] text-slate-400 font-normal">点击选择文件</span>
+                </div>
+
+                <div className="space-y-1 max-h-80 overflow-y-auto">
+                  {/* 1. Review items: 增加标识，“修改”和“新增” */}
+                  {reviewFiles.map((revFile, idx) => {
+                    const isSelected = currentMode === 'review' && activeReviewIndex === idx;
+                    const badge = revFile.changeType === 'modify' ? '修改' : '新增';
+                    return (
+                      <div
+                        key={revFile.id}
+                        onClick={() => {
+                          setMode('review');
+                          if (onSelectReviewIndex) onSelectReviewIndex(idx);
+                          setShowDeliverablesMenu(false);
+                        }}
+                        className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-xs cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-sky-50 text-sky-900 font-semibold border border-sky-200'
+                            : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 min-w-0 flex-1 mr-2">
+                          {getFileIcon(revFile.fileType, "h-4 w-4 shrink-0")}
+                          <span className="truncate">{revFile.name}</span>
+                        </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                          badge === '修改' 
+                            ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                            : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                        }`}>
+                          {badge}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {/* 2. Standard deliverables: 两者都没有的不标识 */}
+                  {allFiles.filter(f => !reviewFiles.some(r => r.name === f.name)).map((file) => {
+                    const isCurrent = currentMode === 'deliverables' && file.id === activeFile?.id;
+                    return (
+                      <div
+                        key={file.id}
+                        onClick={() => {
+                          setMode('deliverables');
+                          onSelectFile(file.id);
+                          setShowDeliverablesMenu(false);
+                        }}
+                        className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-xs cursor-pointer transition-colors ${
+                          isCurrent
+                            ? 'bg-sky-50 text-sky-900 font-semibold border border-sky-200'
+                            : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                          {getFileIcon(file.type, "h-4 w-4 shrink-0")}
+                          <span className="truncate">{file.name}</span>
+                        </div>
+                        {/* 两者都没有的不标识 */}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-1.5 mt-1 border-t border-slate-100 px-2 flex items-center justify-between text-[11px] text-slate-500">
+                  <span>共 {reviewFiles.length + allFiles.length} 项交付产物</span>
+                  <span 
+                    onClick={() => {
+                      showToast('已打包下载全部产物');
+                      setShowDeliverablesMenu(false);
+                    }}
+                    className="text-sky-600 font-medium cursor-pointer hover:underline"
+                  >
+                    全部导出ZIP
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Right Action Icons */}
-        <div className="flex items-center space-x-1 shrink-0 pl-2 border-l border-slate-200">
+        {/* Right side: 审核项 (顶部右对齐) + 审批三按钮 (右对齐) + Window controls */}
+        <div className="flex items-center space-x-2 shrink-0 ml-auto">
+          {/* 顶部右对齐：审核项指示 */}
+          {isReviewFile ? (
+            <div 
+              className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-100/90 border border-slate-200 text-xs font-medium font-mono text-slate-700 shrink-0 select-none"
+              title={`当前处于审核模式，共 ${reviewFiles.length} 项待处理`}
+            >
+              <span className="text-slate-500">审核项：</span>
+              <span className="font-bold text-slate-800">{activeReviewIndex + 1} / {reviewFiles.length}</span>
+              {activeReviewFile?.status !== 'pending' && (
+                <span className={`text-[10px] font-sans font-semibold px-1 py-0.2 rounded ml-1 ${
+                  activeReviewFile?.status === 'approved'
+                    ? 'text-emerald-700 bg-emerald-100/80 border border-emerald-200'
+                    : activeReviewFile?.status === 'rejected'
+                      ? 'text-rose-700 bg-rose-100/80 border border-rose-200'
+                      : 'text-sky-700 bg-sky-100/80 border border-sky-200'
+                }`}>
+                  {activeReviewFile?.status === 'approved' ? '已同意' : activeReviewFile?.status === 'rejected' ? '已否决' : '已提改进'}
+                </span>
+              )}
+            </div>
+          ) : (
+            <div 
+              className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200/60 text-xs font-medium font-mono text-slate-400 shrink-0 select-none"
+              title="当前文件为标准交付物，无需审批"
+            >
+              <span>审核项：</span>
+              <span className="text-[11px] text-slate-400 font-sans">无需审核</span>
+            </div>
+          )}
+
+          {/* 审批三按钮 (右对齐，不需要审批的文件时变灰变浅色不可点击) */}
           <button
             type="button"
-            onClick={() => showToast('已生成产物公开分享凭据链接')}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 transition-colors"
-            title="分享此产物"
+            id="btn-approval-agree"
+            disabled={!isApprovalNeeded}
+            onClick={isApprovalNeeded ? handleApprove : undefined}
+            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 select-none ${
+              isApprovalNeeded
+                ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white shadow-2xs hover:shadow-xs cursor-pointer'
+                : 'bg-slate-100 text-slate-400 border border-slate-200/80 cursor-not-allowed shadow-none opacity-60'
+            }`}
+            title={
+              !isReviewFile 
+                ? "当前文件无需审批" 
+                : activeReviewFile?.status === 'approved' 
+                  ? "当前文件已通过审批" 
+                  : activeReviewFile?.status === 'rejected'
+                    ? "当前文件已否决"
+                    : activeReviewFile?.status === 'improved'
+                      ? "当前文件已提交改进意见"
+                      : "同意并合并至交付物库"
+            }
           >
-            <Share2 className="h-4 w-4" />
+            <Check className={`h-3.5 w-3.5 ${isApprovalNeeded ? 'text-white' : 'text-slate-400'}`} />
+            <span>同意</span>
           </button>
 
+          <button
+            type="button"
+            id="btn-approval-reject"
+            disabled={!isApprovalNeeded}
+            onClick={isApprovalNeeded ? handleReject : undefined}
+            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 select-none ${
+              isApprovalNeeded
+                ? 'bg-white hover:bg-rose-50 active:bg-rose-100 text-rose-600 hover:text-rose-700 border border-rose-200 shadow-2xs hover:border-rose-300 cursor-pointer'
+                : 'bg-slate-100 text-slate-400 border border-slate-200/80 cursor-not-allowed shadow-none opacity-60'
+            }`}
+            title={
+              !isReviewFile 
+                ? "当前文件无需审批" 
+                : activeReviewFile?.status !== 'pending'
+                  ? "当前文件无需重复处理"
+                  : "否决并退回原版本"
+            }
+          >
+            <XCircle className={`h-3.5 w-3.5 ${isApprovalNeeded ? 'text-rose-600' : 'text-slate-400'}`} />
+            <span>否决</span>
+          </button>
+
+          <button
+            type="button"
+            id="btn-approval-improve"
+            disabled={!isApprovalNeeded}
+            onClick={isApprovalNeeded ? () => setShowImproveModal(true) : undefined}
+            className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 select-none ${
+              isApprovalNeeded
+                ? 'bg-sky-600 hover:bg-sky-700 active:bg-sky-800 text-white shadow-2xs hover:shadow-xs cursor-pointer'
+                : 'bg-slate-100 text-slate-400 border border-slate-200/80 cursor-not-allowed shadow-none opacity-60'
+            }`}
+            title={
+              !isReviewFile 
+                ? "当前文件无需审批" 
+                : activeReviewFile?.status !== 'pending'
+                  ? "当前文件无需重复处理"
+                  : "点击输入改进意见"
+            }
+          >
+            <Sparkles className={`h-3.5 w-3.5 ${isApprovalNeeded ? 'text-amber-300' : 'text-slate-400'}`} />
+            <span>改进</span>
+          </button>
+
+          {/* 分隔线 */}
+          <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
+
+          {/* Window controls (Fullscreen, Close) */}
           <button
             type="button"
             onClick={toggleFullscreen}
-            className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${
+            className={`p-1.5 rounded-lg transition-colors flex items-center justify-center cursor-pointer ${
               isExpandedFull 
                 ? 'text-sky-600 bg-sky-100/80 hover:bg-sky-200' 
-                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
             }`}
-            title={isExpandedFull ? "还原窗口大小 (退出全屏，按 ESC 亦可)" : "全屏展开预览 (覆盖左侧边栏与全部界面)"}
+            title={isExpandedFull ? "退出全屏" : "全屏模式"}
           >
-            {isExpandedFull ? (
-              <Minimize2 className="h-4 w-4" />
-            ) : (
-              <Maximize2 className="h-4 w-4" />
-            )}
+            {isExpandedFull ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
           </button>
-
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 transition-colors"
-            title="收起右侧独立工作区"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="收起右侧面板"
           >
             <PanelRight className="h-4 w-4" />
           </button>
@@ -329,120 +581,23 @@ export default function RightWorkspacePanel({
       </div>
 
       {/* ----------------------------------------------------------------- */}
-      {/* 2. SUBHEADER: Deliverables Dropdown & Editor Toolbar              */}
+      {/* 2. CANVAS / REVIEW CONTENT DISPLAY                                */}
       {/* ----------------------------------------------------------------- */}
-      <div className="h-10 bg-white border-b border-slate-200 px-3 flex items-center justify-between shrink-0 relative">
-        {/* Left: Deliverables Menu Trigger */}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowDeliverablesMenu(prev => !prev)}
-            className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200/70 border border-slate-200/80 transition-colors cursor-pointer"
-          >
-            <span>概览</span>
-            <ChevronDown className={`h-3 w-3 text-slate-500 transition-transform ${showDeliverablesMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Dropdown Floating Panel: Deliverables List */}
-          {showDeliverablesMenu && (
-            <div 
-              className="absolute left-0 top-9 w-72 bg-white rounded-xl border border-slate-200 shadow-xl p-2 z-40 animate-in fade-in slide-in-from-top-1 duration-150"
-            >
-              <div className="flex items-center justify-between px-2.5 py-1.5 mb-1 border-b border-slate-100 text-xs font-semibold text-slate-700">
-                <span className="flex items-center space-x-1.5">
-                  <span>产物</span>
-                  <ChevronDown className="h-3 w-3 text-slate-400" />
-                </span>
-                <Pin className="h-3.5 w-3.5 text-slate-400 rotate-45" />
-              </div>
-
-              <div className="space-y-0.5 max-h-72 overflow-y-auto">
-                {allFiles.map((file) => {
-                  const isCurrent = file.id === activeFile?.id;
-                  return (
-                    <div
-                      key={file.id}
-                      onClick={() => {
-                        onAddTab(file.id);
-                        onSelectFile(file.id);
-                        setShowDeliverablesMenu(false);
-                      }}
-                      className={`flex items-center space-x-2 px-2.5 py-2 rounded-lg text-xs cursor-pointer transition-colors ${
-                        isCurrent 
-                          ? 'bg-sky-50 text-sky-800 font-medium' 
-                          : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                      }`}
-                    >
-                      {getFileIcon(file.type, "h-4 w-4 shrink-0")}
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="truncate text-xs font-medium">{file.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{file.size} · {file.typeLabel}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="pt-1.5 mt-1 border-t border-slate-100 px-2 flex items-center justify-between text-[11px] text-slate-500">
-                <span>共 {allFiles.length} 项交付产物</span>
-                <span className="text-sky-600 font-medium cursor-pointer hover:underline">全部导出ZIP</span>
-              </div>
-            </div>
-          )}
+      {currentMode === 'review' && activeReviewFile ? (
+        <div className="flex-1 overflow-hidden flex flex-col relative">
+          <ReviewFileViewer
+            file={activeReviewFile}
+            showOldVersion={showOldVersion}
+            onToggleOldVersion={() => setShowOldVersion(prev => !prev)}
+          />
         </div>
-
-        {/* Center / Right: Formatting & Tool Controls */}
-        <div className="flex items-center space-x-2.5 text-xs text-slate-600">
-          <div className="hidden sm:flex items-center space-x-3 text-xs border-r border-slate-200 pr-3">
-            <button className="hover:text-slate-900 flex items-center space-x-1 cursor-pointer">
-              <span>段落</span>
-              <ChevronDown className="h-3 w-3 text-slate-400" />
-            </button>
-            <button className="hover:text-slate-900 cursor-pointer">绘图</button>
-            <button className="hover:text-slate-900 cursor-pointer">动画</button>
-            <button className="hover:text-slate-900 cursor-pointer">页面设置</button>
-            <button 
-              onClick={() => showToast('已唤起浏览器高清矢量打印')} 
-              className="hover:text-slate-900 flex items-center space-x-1 cursor-pointer"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              <span>打印</span>
-            </button>
-            <button className="hover:text-slate-900 flex items-center space-x-0.5 cursor-pointer">
-              <Search className="h-3.5 w-3.5" />
-              <ChevronDown className="h-2.5 w-2.5 text-slate-400" />
-            </button>
-          </div>
-
-          {/* Free Select Mode Toggle */}
-          <div className="flex items-center space-x-1.5">
-            <span className="text-xs text-slate-600 font-medium hidden md:inline">自由框选模式</span>
-            <button
-              type="button"
-              onClick={() => setFreeSelectMode(prev => !prev)}
-              className={`w-8 h-4 rounded-full transition-colors relative cursor-pointer ${
-                freeSelectMode ? 'bg-sky-600' : 'bg-slate-300'
-              }`}
-            >
-              <span 
-                className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform ${
-                  freeSelectMode ? 'translate-x-4' : 'translate-x-0'
-                }`} 
-              />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* ----------------------------------------------------------------- */}
-      {/* 3. DOCUMENT CANVAS PREVIEW AREA                                   */}
-      {/* ----------------------------------------------------------------- */}
-      <div 
-        className="flex-1 bg-slate-100/70 overflow-auto p-4 flex flex-col items-center justify-start relative"
-        onClick={() => {
-          if (showDeliverablesMenu) setShowDeliverablesMenu(false);
-        }}
-      >
+      ) : (
+        <div 
+          className="flex-1 bg-slate-100/70 overflow-auto p-4 flex flex-col items-center justify-start relative"
+          onClick={() => {
+            if (showDeliverablesMenu) setShowDeliverablesMenu(false);
+          }}
+        >
         {/* PPT SLIDE PREVIEW (Default for 安里AI_BP补充_项目路标.pptx) */}
         {activeFile.type === 'ppt' && (
           <div 
@@ -741,54 +896,102 @@ export default function RightWorkspacePanel({
           </div>
         )}
       </div>
+      )}
 
-      {/* ----------------------------------------------------------------- */}
-      {/* 4. BOTTOM STATUS BAR: Page Navigation, Layout Modes, Zoom Controls*/}
-      {/* ----------------------------------------------------------------- */}
-      <div className="h-9 bg-white border-t border-slate-200 px-4 flex items-center justify-between text-xs text-slate-500 shrink-0 select-none">
-        <div className="flex items-center space-x-3">
-          <span className="font-mono text-slate-700 font-semibold">第 1 页 / 共 1 页</span>
-          <span className="text-slate-300">|</span>
-          <span className="text-emerald-700 font-medium flex items-center space-x-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            <span>AI生成已校对 · 符合2026大赛评审规范</span>
-          </span>
+      {/* 改进意见输入小窗口 (Modal) */}
+      {showImproveModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-sky-50/60 to-indigo-50/40">
+              <div className="flex items-center space-x-2.5">
+                <div className="h-8 w-8 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
+                  <Sparkles className="h-4 w-4 text-sky-600" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">输入改进意见</h3>
+                  <p className="text-[11px] text-slate-500 truncate max-w-xs sm:max-w-sm">
+                    针对《{currentFileName}》向智能体提出针对性修改要求
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowImproveModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-slate-700">
+                  具体修改与润色建议 <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={improveComment}
+                  onChange={(e) => setImproveComment(e.target.value)}
+                  placeholder="请详细描述具体的优化方向或修改意见（例如：补充核心技术壁垒对比、完善商业模式与财务预测数据、强化答辩逻辑结构等）..."
+                  rows={4}
+                  autoFocus
+                  className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 resize-none placeholder:text-slate-400 leading-relaxed text-slate-800"
+                />
+              </div>
+
+              {/* Quick suggestion tags */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] text-slate-500 font-medium">快捷建议参考：</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    '补充竞品技术壁垒对比与权威检测数据',
+                    '完善未来三年财务预测与敏感性分析',
+                    '强化路演逻辑，对标国赛金奖精简要点',
+                    '针对行业痛点深化场景化落地应用案例'
+                  ].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        setImproveComment(prev => prev ? `${prev}\n· ${tag}` : `· ${tag}`);
+                      }}
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 border border-slate-200/80 text-slate-600 transition-colors cursor-pointer"
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 hidden sm:inline">
+                提交后将由双创专家 Agent 重新推理润色
+              </span>
+              <div className="flex items-center space-x-2 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowImproveModal(false)}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-200/70 transition-colors cursor-pointer"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={handleImproveSubmit}
+                  disabled={!improveComment.trim()}
+                  className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 active:bg-sky-800 disabled:bg-slate-200 disabled:text-slate-400 text-white flex items-center space-x-1.5 transition-all shadow-xs cursor-pointer"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>提交改进</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-
-        {/* Zoom & View Controls */}
-        <div className="flex items-center space-x-2.5">
-          <button
-            type="button"
-            onClick={() => setZoomLevel(prev => Math.max(30, prev - 6))}
-            className="p-1 hover:bg-slate-100 rounded text-slate-600"
-            title="缩小"
-          >
-            <ZoomOut className="h-3.5 w-3.5" />
-          </button>
-
-          <span className="font-mono text-slate-800 font-semibold w-10 text-center">
-            {zoomLevel}%
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setZoomLevel(prev => Math.min(100, prev + 6))}
-            className="p-1 hover:bg-slate-100 rounded text-slate-600"
-            title="放大"
-          >
-            <ZoomIn className="h-3.5 w-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setZoomLevel(48)}
-            className="text-[11px] text-slate-500 hover:text-slate-800 px-1.5 py-0.5 rounded hover:bg-slate-100"
-            title="重置缩放为 48%"
-          >
-            适屏
-          </button>
-        </div>
-      </div>
+      )}
     </aside>
   );
 }

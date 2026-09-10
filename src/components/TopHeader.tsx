@@ -46,6 +46,7 @@ export default function TopHeader({
     new_chat: { title: '新建对话', subtitle: '全场景AI备赛智囊 · 商业计划书体检 · 路演答辩模拟 · 政策研读' },
     guidance_workbench: { title: '全链路指导工作台', subtitle: 'L1~L6全阶段智能演进 · 商业计划书12章沉浸打磨 · 多模态材料档案与版本快照' },
     defense_training: { title: '模拟评审与答辩训练', subtitle: '全真模拟答辩 · 评委风格质询 · 六维能力雷达与复盘报告' },
+    asset_management: { title: '项目资产管理系统', subtitle: '单分支时间线演进 · 3栏联动架构 · 历史版本快照回溯与代码/文档Diff对比' },
     my_project: { title: '项目工作台', subtitle: 'AI对标得分 · 专家问诊诊断 · 整改工单交付' },
     cockpit: { title: '备赛数据驾驶舱', subtitle: '全校项目总览 · 梯队分布 · AI战略决策' },
     screening: { title: '智能对标初筛与排名', subtitle: '2026教育部官方主赛道二级细分指标对标' },

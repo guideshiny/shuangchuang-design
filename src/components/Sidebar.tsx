@@ -59,7 +59,8 @@ export type TabType =
   | 'coach'
   | 'new_chat'
   | 'guidance_workbench'
-  | 'defense_training';
+  | 'defense_training'
+  | 'asset_management';
 
 interface SidebarProps {
   activeTab: TabType;
@@ -198,6 +199,7 @@ export default function Sidebar({
             { id: 'my_project' as TabType, label: '项目工作台', icon: Target, badge: 'AI对标' },
             { id: 'guidance_workbench' as TabType, label: '全链路指导工作台', icon: Workflow, badge: 'L1~L6', highlight: true },
             { id: 'defense_training' as TabType, label: '模拟评审与答辩训练', icon: Swords, badge: '实训', highlight: false },
+            { id: 'asset_management' as TabType, label: '项目资产管理系统', icon: FolderKanban, badge: 'Git模式', highlight: false },
           ]
         },
       ];

@@ -28,6 +28,7 @@ import DeepCallResultCard from './DeepCallResultCard';
 import SessionGuidePage from './SessionGuidePage';
 import { ProjectSpace, ChatMessage, CoachSession, ReActProcess, DataFlowLog, AssociatedFileItem } from '../types';
 import { mockSessionHistories } from '../data/mockSessionMessages';
+import { ReviewFileItem, ReviewDecision, FileAnnotation, INITIAL_REVIEW_FILES } from '../types/reviewTypes';
 
 const DEFAULT_WORKSPACE_FILES: AssociatedFileItem[] = [
   {
@@ -101,6 +102,14 @@ interface SceneAICoachProps {
   onOpenFileInRightWorkspace?: (file: AssociatedFileItem) => void;
   isNewChatMode?: boolean;
   onStartSessionFromGuide?: (prompt: string, initialMessages?: ChatMessage[]) => string;
+  // Review & Annotation features
+  reviewFiles?: ReviewFileItem[];
+  activeReviewIndex?: number;
+  onSelectReviewIndex?: (index: number) => void;
+  onReviewDecision?: (fileId: string, decision: ReviewDecision, comment?: string) => void;
+  onAddAnnotation?: (fileId: string, annotation: { selectedText: string; comment: string; side?: 'old' | 'new' | 'single' }) => void;
+  onRemoveAnnotation?: (fileId: string, annotationId: string) => void;
+  onRegisterReviewHandler?: (handler: (fileId: string, decision: ReviewDecision, comment?: string) => void) => void;
 }
 
 export default function SceneAICoach({ 
@@ -121,9 +130,24 @@ export default function SceneAICoach({
   onSetRightWorkspaceOpen,
   onOpenFileInRightWorkspace,
   isNewChatMode = false,
-  onStartSessionFromGuide
+  onStartSessionFromGuide,
+  reviewFiles: propReviewFiles,
+  activeReviewIndex: propActiveReviewIndex,
+  onSelectReviewIndex,
+  onReviewDecision,
+  onAddAnnotation,
+  onRemoveAnnotation,
+  onRegisterReviewHandler
 }: SceneAICoachProps) {
   // 1. Core State
+  const [internalReviewFiles, setInternalReviewFiles] = useState<ReviewFileItem[]>(INITIAL_REVIEW_FILES);
+  const [internalActiveReviewIndex, setInternalActiveReviewIndex] = useState<number>(0);
+
+  const reviewFilesList = propReviewFiles !== undefined ? propReviewFiles : internalReviewFiles;
+  const currentReviewIndex = propActiveReviewIndex !== undefined ? propActiveReviewIndex : internalActiveReviewIndex;
+  const currentActiveReviewFile = reviewFilesList.length > 0 ? (reviewFilesList[currentReviewIndex] || reviewFilesList[0]) : null;
+  // 审批按钮窗口在审批完全部文件后消失
+  const hasPendingReviewFiles = reviewFilesList.some(f => f.status === 'pending');
   const [selectedUniversity, setSelectedUniversity] = useState<UniversityOption>(mockUniversities[0]); // Default XMU
   const [currentStage, setCurrentStage] = useState<'L1' | 'L2' | 'L3' | 'L4'>('L3');
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState<boolean>(false);
@@ -135,6 +159,55 @@ export default function SceneAICoach({
       onSetRightWorkspaceOpen(true);
     }
   };
+
+  const postReviewChatMessage = (decision: ReviewDecision, targetFile: ReviewFileItem, comment?: string) => {
+    const fileTitle = targetFile.name;
+    let decisionText = '';
+    if (decision === 'approved') {
+      decisionText = `【产物审批已通过】我已同意《${fileTitle}》的${targetFile.changeType === 'create' ? '新增' : '修改'}内容，已合并至项目交付物库。`;
+    } else if (decision === 'rejected') {
+      decisionText = `【产物审批已否决】已否决《${fileTitle}》的${targetFile.changeType === 'create' ? '新增' : '修改'}方案，保留原基准版本。`;
+    } else if (decision === 'improved') {
+      decisionText = `【产物改进要求】已提出对《${fileTitle}》的改进要求：\n${comment || '请结合大赛金奖规范进一步润色与论证。'}\n请 Agent 根据上述意见进行针对性修改与重构！`;
+    }
+
+    const decisionMsg: ChatMessage = {
+      id: `review-action-${Date.now()}`,
+      sender: 'student',
+      type: 'text',
+      text: decisionText,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, decisionMsg]);
+
+    // If decision was 'improved', simulate Agent response acknowledging improvement
+    if (decision === 'improved') {
+      setIsThinking(true);
+      setTimeout(() => {
+        setIsThinking(false);
+        const agentAckMsg: ChatMessage = {
+          id: `agent-ack-${Date.now()}`,
+          sender: 'coach',
+          type: 'text',
+          text: `收到！已记录针对《${fileTitle}》的改进意见：“${comment || '进一步优化论证'}”。正在结合金奖指标重新推理并润色生成新版本，请稍候在右侧产物区查验！`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        setMessages(prev => [...prev, agentAckMsg]);
+      }, 900);
+    }
+  };
+
+  useEffect(() => {
+    if (onRegisterReviewHandler) {
+      onRegisterReviewHandler((fileId: string, decision: ReviewDecision, comment?: string) => {
+        const target = reviewFilesList.find(f => f.id === fileId) || currentActiveReviewFile;
+        if (target) {
+          postReviewChatMessage(decision, target, comment);
+        }
+      });
+    }
+  }, [onRegisterReviewHandler, reviewFilesList, currentActiveReviewFile]);
 
   const [showFlywheelModal, setShowFlywheelModal] = useState<boolean>(false);
   const [bpUploaded, setBpUploaded] = useState<boolean>(true);

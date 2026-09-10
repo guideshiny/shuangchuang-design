@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar, { TabType } from './components/Sidebar';
 import TopHeader from './components/TopHeader';
 import CockpitDashboard from './components/CockpitDashboard';
@@ -23,6 +23,7 @@ import ProjectMemberWorkbench from './components/ProjectMemberWorkbench';
 import SceneAICoach from './components/SceneAICoach';
 import SceneDefenseTraining from './components/SceneDefenseTraining';
 import { SceneGuidanceWorkbench } from './components/SceneGuidanceWorkbench';
+import AssetManagementSystem from './components/AssetManagementSystem';
 import RightWorkspacePanel from './components/RightWorkspacePanel';
 
 import { mockProjects } from './data/mockProjects';
@@ -38,6 +39,7 @@ import {
   AssociatedFileItem
 } from './types';
 import { GuidanceTaskContext } from './components/guidance/guidanceTypes';
+import { ReviewFileItem, FileAnnotation, ReviewDecision, INITIAL_REVIEW_FILES } from './types/reviewTypes';
 
 export default function App() {
   // Authentication & Session State
@@ -108,8 +110,77 @@ export default function App() {
   const [activeWorkspaceFileId, setActiveWorkspaceFileId] = useState<string>('art-ppt-1');
   const [openWorkspaceTabs, setOpenWorkspaceTabs] = useState<string[]>(['art-ppt-1', 'art-xlsx-1', 'art-doc-1']);
 
+  // Review & Annotation State for "产物与审核区"
+  const [reviewFiles, setReviewFiles] = useState<ReviewFileItem[]>(INITIAL_REVIEW_FILES);
+  const [activeReviewIndex, setActiveReviewIndex] = useState<number>(0);
+  const [panelMode, setPanelMode] = useState<'review' | 'deliverables'>('review');
+  const reviewCallbackRef = useRef<((fileId: string, decision: ReviewDecision, comment?: string) => void) | null>(null);
+
+  const handleReviewDecision = (fileId: string, decision: ReviewDecision, comment?: string) => {
+    setReviewFiles(prev => prev.map(f => {
+      if (f.id === fileId) {
+        return {
+          ...f,
+          status: decision,
+          decisionTime: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        };
+      }
+      return f;
+    }));
+
+    if (reviewCallbackRef.current) {
+      reviewCallbackRef.current(fileId, decision, comment);
+    }
+
+    // Auto jump to next review file
+    setActiveReviewIndex(prev => {
+      if (prev < reviewFiles.length - 1) {
+        return prev + 1;
+      }
+      return prev;
+    });
+
+    // Make sure the right workspace is open and in review mode
+    setIsRightWorkspaceOpen(true);
+    setPanelMode('review');
+  };
+
+  const handleAddAnnotation = (fileId: string, annotation: { selectedText: string; comment: string; side?: 'old' | 'new' | 'single' }) => {
+    const newAnn: FileAnnotation = {
+      id: `ann-${Date.now()}`,
+      fileId,
+      selectedText: annotation.selectedText,
+      comment: annotation.comment,
+      timestamp: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+      author: session?.name || '项目负责人 林同学',
+      side: annotation.side
+    };
+    setReviewFiles(prev => prev.map(f => {
+      if (f.id === fileId) {
+        return {
+          ...f,
+          annotations: [...f.annotations, newAnn]
+        };
+      }
+      return f;
+    }));
+  };
+
+  const handleRemoveAnnotation = (fileId: string, annotationId: string) => {
+    setReviewFiles(prev => prev.map(f => {
+      if (f.id === fileId) {
+        return {
+          ...f,
+          annotations: f.annotations.filter(a => a.id !== annotationId)
+        };
+      }
+      return f;
+    }));
+  };
+
   const handleOpenFileInRightWorkspace = (file: AssociatedFileItem) => {
     setIsRightWorkspaceOpen(true);
+    setPanelMode('deliverables');
     setActiveWorkspaceFileId(file.id);
     setOpenWorkspaceTabs(prev => {
       if (!prev.includes(file.id)) {
@@ -523,7 +594,7 @@ export default function App() {
 
       {/* Right Column: Clean Top Status Bar & Workspace */}
       <div className={`flex-1 flex flex-col h-full min-w-0 ${
-        ['coach', 'new_chat', 'guidance_workbench'].includes(activeTab) 
+        ['coach', 'new_chat', 'guidance_workbench', 'asset_management'].includes(activeTab) 
           ? 'overflow-hidden' 
           : 'overflow-y-auto'
       }`}>
@@ -551,7 +622,7 @@ export default function App() {
 
         {/* Main Content Area */}
         <main className={`flex-1 min-w-0 ${
-          ['coach', 'new_chat', 'guidance_workbench'].includes(activeTab)
+          ['coach', 'new_chat', 'guidance_workbench', 'asset_management'].includes(activeTab)
             ? 'h-[calc(100vh-4rem)] overflow-hidden p-0 space-y-0 flex flex-col'
             : 'p-4 sm:p-6 lg:p-8 space-y-6'
         }`}>
@@ -576,6 +647,15 @@ export default function App() {
               onOpenFileInRightWorkspace={handleOpenFileInRightWorkspace}
               isNewChatMode={activeTab === 'new_chat'}
               onStartSessionFromGuide={handleStartSessionFromGuide}
+              reviewFiles={reviewFiles}
+              activeReviewIndex={activeReviewIndex}
+              onSelectReviewIndex={(idx) => setActiveReviewIndex(idx)}
+              onReviewDecision={handleReviewDecision}
+              onAddAnnotation={handleAddAnnotation}
+              onRemoveAnnotation={handleRemoveAnnotation}
+              onRegisterReviewHandler={(handler) => {
+                reviewCallbackRef.current = handler;
+              }}
             />
           )}
 
@@ -595,6 +675,14 @@ export default function App() {
             <SceneDefenseTraining
               currentProject={currentMemberProject}
               session={session}
+            />
+          )}
+
+          {activeTab === 'asset_management' && (
+            <AssetManagementSystem
+              currentProject={currentMemberProject}
+              session={session}
+              onNavigateTab={(tab) => setActiveTab(tab as TabType)}
             />
           )}
 
@@ -692,7 +780,7 @@ export default function App() {
         </main>
 
         {/* Global Compact Footer (shown only for regular dashboard tabs) */}
-        {!['coach', 'new_chat', 'guidance_workbench'].includes(activeTab) && (
+        {!['coach', 'new_chat', 'guidance_workbench', 'asset_management'].includes(activeTab) && (
           <footer className="border-t border-slate-200 bg-white py-2.5 px-6 text-center text-[11px] text-slate-400 shrink-0">
             <span>{session.university ? `${session.university} · ` : ''}2026年中国国际大学生创新大赛 · 双创数智中枢 | 4端协同 · 金牌培育 · 全流程督导闭环</span>
           </footer>
@@ -757,6 +845,14 @@ export default function App() {
           onCloseTab={handleCloseWorkspaceTab}
           onAddTab={handleAddWorkspaceTab}
           projectName={currentActiveSpace?.name || '安里AI / 智耘农业'}
+          reviewFiles={reviewFiles}
+          activeReviewIndex={activeReviewIndex}
+          onSelectReviewIndex={(idx) => setActiveReviewIndex(idx)}
+          onAddAnnotation={handleAddAnnotation}
+          onRemoveAnnotation={handleRemoveAnnotation}
+          panelMode={panelMode}
+          onSetPanelMode={setPanelMode}
+          onReviewDecision={handleReviewDecision}
         />
       )}
 
